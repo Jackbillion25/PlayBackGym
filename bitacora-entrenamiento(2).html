@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bitácora — Registro de entrenamiento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14110f;
+  --surface:#1d1815;
+  --surface2:#26201b;
+  --surface3:#2f2822;
+  --border:#3a322b;
+  --border2:#4a4038;
+  --accent:#d9a441;
+  --accent-soft:rgba(217,164,65,0.14);
+  --accent2:#f2c96d;
+  --good:#7aab5f;
+  --good-soft:rgba(122,171,95,0.14);
+  --bad:#c1543f;
+  --bad-soft:rgba(193,84,63,0.14);
+  --text:#efe8dd;
+  --text2:#a89c8c;
+  --text3:#6b6055;
+  --display:'Bebas Neue',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --body:'Inter',sans-serif;
+  --radius:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);color:var(--text);font-family:var(--body);}
+body{min-height:100vh;-webkit-tap-highlight-color:transparent;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+button,input,select,textarea{font-family:inherit;color:inherit;}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;font-size:15px;width:100%;outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+input::placeholder,textarea::placeholder{color:var(--text3);}
+button{cursor:pointer;border:none;background:none;}
+textarea{resize:vertical;min-height:60px;}
+
+#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:40px;}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px;}
+.brand{font-family:var(--display);font-size:30px;letter-spacing:2px;color:var(--accent);}
+.brand small{display:block;font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-top:-4px;}
+.profile-chip{font-family:var(--mono);font-size:11px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 12px;display:flex;align-items:center;gap:6px;cursor:pointer;}
+.profile-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+
+main{flex:1;padding:0 20px;display:flex;flex-direction:column;gap:16px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:6px;}
+h1.step-title{font-family:var(--display);font-size:28px;letter-spacing:1px;margin-bottom:4px;}
+.hint{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px;}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.field label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+.btn{height:48px;border-radius:8px;font-family:var(--display);font-size:17px;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;transition:transform .1s;}
+.btn:active{transform:scale(0.98);}
+.btn-primary{background:var(--accent);color:#181008;font-weight:700;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:transparent;border:1px solid var(--bad);color:var(--bad);}
+.btn-sm{height:38px;font-size:13px;letter-spacing:1px;padding:0 14px;width:auto;}
+.btn-row{display:flex;gap:10px;}
+
+.chip-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.chip{font-family:var(--mono);font-size:12px;padding:8px 14px;border-radius:20px;border:1px solid var(--border2);color:var(--text2);}
+.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+
+.exercise-row{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+.exercise-row .ex-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.exercise-row .ex-name{font-weight:600;font-size:15px;}
+.exercise-row .ex-meta{font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.6;}
+.icon-btn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text3);flex:0 0 auto;}
+.icon-btn:hover{color:var(--bad);background:var(--bad-soft);}
+
+.day-block{margin-bottom:18px;}
+.day-block-title{font-family:var(--display);font-size:20px;letter-spacing:1px;margin-bottom:8px;color:var(--accent2);}
+
+.list-empty{font-size:13px;color:var(--text3);text-align:center;padding:18px 0;font-style:italic;}
+
+/* training checklist */
+.ex-train-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;transition:border-color .15s,background .15s;}
+.ex-train-card.done{border-color:var(--good);background:var(--good-soft);}
+.ex-train-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.checkbox{width:24px;height:24px;border-radius:6px;border:2px solid var(--border2);flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;}
+.checkbox.checked{background:var(--good);border-color:var(--good);}
+.ex-train-title{font-weight:700;font-size:16px;flex:1;}
+.ex-fields2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.small-note{font-size:12px;}
+
+/* per-set rows with steppers */
+.set-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.set-idx{font-family:var(--mono);font-size:11px;color:var(--text3);width:20px;flex:0 0 auto;}
+.stepper{display:flex;align-items:center;background:var(--surface3);border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:1;}
+.stepper button{width:32px;height:36px;color:var(--accent);font-size:18px;flex:0 0 auto;line-height:1;}
+.stepper button:active{background:var(--accent-soft);}
+.stepper input{border:none;background:transparent;text-align:center;padding:0;height:36px;width:100%;font-size:14px;}
+.set-spacer{width:28px;display:inline-block;flex:0 0 auto;}
+
+/* ticket / punch card look for portable state + summary */
+.ticket{position:relative;background:var(--surface2);border:1px dashed var(--border2);border-radius:10px;padding:20px 18px;}
+.ticket::before,.ticket::after{content:'';position:absolute;top:50%;width:18px;height:18px;background:var(--bg);border:1px dashed var(--border2);border-radius:50%;transform:translateY(-50%);}
+.ticket::before{left:-10px;}
+.ticket::after{right:-10px;}
+.ticket-code{font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text2);word-break:break-all;background:var(--surface3);border-radius:6px;padding:10px;max-height:120px;overflow-y:auto;margin:12px 0;}
+
+.compare-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;}
+.compare-row:last-child{border-bottom:none;}
+.compare-name{font-weight:600;font-size:14px;flex:1;}
+.compare-status{font-family:var(--mono);font-size:11px;text-align:right;}
+.compare-status.up{color:var(--good);}
+.compare-status.down{color:var(--bad);}
+.compare-status.same{color:var(--text3);}
+.compare-status.skip{color:var(--bad);}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid var(--accent);color:var(--text);font-size:13px;padding:12px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:all .25s;z-index:500;max-width:90%;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.progress-dots{display:flex;gap:6px;justify-content:center;margin-bottom:18px;}
+.progress-dots span{width:8px;height:8px;border-radius:50%;background:var(--border2);}
+.progress-dots span.active{background:var(--accent);}
+
+.section-link{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.section-link:last-child{border-bottom:none;}
+.section-link .t{font-weight:600;font-size:15px;}
+.section-link .s{font-size:12px;color:var(--text2);}
+.section-link .arrow{color:var(--text3);}
+
+.history-item{padding:12px 0;border-bottom:1px solid var(--border);}
+.history-item:last-child{border-bottom:none;}
+.history-item .h-top{display:flex;justify-content:space-between;font-size:13px;}
+.history-item .h-day{font-weight:600;}
+.history-item .h-date{font-family:var(--mono);color:var(--text3);font-size:11px;}
+.history-item .h-stat{font-size:12px;color:var(--text2);margin-top:4px;}
+
+.tutorial-icon{font-size:34px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const STORAGE_KEY = 'bitacora_state_v1';
+let state = loadState();
+let trainingDraft = null; // ephemeral, only exists during an active training session
+
+const TUTORIAL_SLIDES = [
+  { eyebrow:'Cómo funciona · 1 de 4', title:'Todo vive en tu navegador', icon:'🔒',
+    body:'No hay cuentas ni servidores. Tu nombre y teléfono solo generan un identificador único y dan formato a tu retroalimentación. Todo tu progreso se guarda en este dispositivo.' },
+  { eyebrow:'Cómo funciona · 2 de 4', title:'Tu rutina es un punto de partida', icon:'🗓️',
+    body:'Armas tus días (ej. "Empuje", "Piernas") y dentro de cada uno agregas ejercicios con series/reps/peso, altura de banco, polea o notas. Esos valores son solo tu referencia inicial: lo real se registra cada vez que entrenas.' },
+  { eyebrow:'Cómo funciona · 3 de 4', title:'Cada serie se registra por separado', icon:'💪',
+    body:'Durante el entreno, cada ejercicio muestra sus series de forma independiente con botones +/− para ajustar peso y reps rápido. Si en la serie 1 usaste 220 lb y en la serie 2 bajaste a 200 lb, solo agrega otra serie — no dupliques el ejercicio.' },
+  { eyebrow:'Cómo funciona · 4 de 4', title:'Tu progreso es portátil', icon:'📤',
+    body:'Al terminar la sesión, la app compara contra tu registro anterior y te da un resumen listo para copiar a WhatsApp. También puedes copiar un código de estado para continuar en otro dispositivo.' }
+];
+
+function defaultState(){
+  return { profile:null, days:[], history:[], screen:'welcome', wizardDayIndex:0, trainDayId:null, lastFeedback:null, tutorialIndex:0, tutorialReturn:'wiz-name' };
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultState(), parsed, {screen: parsed.profile ? 'dashboard' : 'welcome'});
+  }catch(e){ return defaultState(); }
+}
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function goto(screen){ state.screen = screen; render(); window.scrollTo(0,0); }
+
+let toastTimer=null;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ============================================================
+// EXPORT / IMPORT ("estado portable")
+// ============================================================
+function exportCode(){
+  const payload = { profile: state.profile, days: state.days, history: state.history, exportedAt: new Date().toISOString() };
+  const json = JSON.stringify(payload);
+  return btoa(unescape(encodeURIComponent(json)));
+}
+function importCode(code){
+  const json = decodeURIComponent(escape(atob(code.trim())));
+  const payload = JSON.parse(json);
+  if(!payload.profile || !payload.profile.name) throw new Error('formato inválido');
+  state.profile = payload.profile;
+  state.days = payload.days || [];
+  state.history = payload.history || [];
+  saveState();
+}
+
+// ============================================================
+// HELPERS: exercises, sets & history lookups
+// ============================================================
+function findDay(dayId){ return state.days.find(d=>d.id===dayId); }
+function findExercise(dayId, exId){
+  const d = findDay(dayId);
+  return d ? d.exercises.find(e=>e.id===exId) : null;
+}
+// find most recent history entry (any session) for a given exercise id
+function lastEntryFor(exId, historyList){
+  for(let i=historyList.length-1;i>=0;i--){
+    const found = historyList[i].entries.find(e=>e.exerciseId===exId);
+    if(found) return found;
+  }
+  return null;
+}
+// backward-compatible: returns an array of {reps,weight} sets whether old flat format or new array format
+function entrySets(entry){
+  if(entry.sets && Array.isArray(entry.sets) && entry.sets.length) return entry.sets;
+  return [{reps: entry.reps, weight: entry.weight}];
+}
+function setStats(sets){
+  let top=0, volume=0;
+  sets.forEach(s=>{
+    const w=parseFloat(s.weight)||0, r=parseFloat(s.reps)||0;
+    if(w>top) top=w;
+    volume += w*r;
+  });
+  return {top, volume: Math.round(volume*10)/10};
+}
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+// ============================================================
+// TRAINING DRAFT (ephemeral working copy for the active session)
+// ============================================================
+function buildTrainingDraft(day){
+  const draft = { dayId: day.id, exercises: {} };
+  day.exercises.forEach(ex=>{
+    const prev = lastEntryFor(ex.id, state.history);
+    let sets;
+    if(prev){
+      sets = entrySets(prev).map(s=>({reps: s.reps||'', weight: s.weight||''}));
+    } else {
+      const n = Math.max(1, parseInt(ex.sets)||1);
+      sets = Array.from({length:n}, ()=>({reps: ex.reps||'', weight: ex.weight||''}));
+    }
+    draft.exercises[ex.id] = {
+      completed:false,
+      sets,
+      bench: (prev && prev.bench) || ex.bench || '',
+      pulley: (prev && prev.pulley) || ex.pulley || '',
+      notes: ''
+    };
+  });
+  return draft;
+}
+
+// ============================================================
+// RENDER ROOT
+// ============================================================
+function render(){
+  const app = document.getElementById('app');
+  switch(state.screen){
+    case 'welcome': app.innerHTML = renderWelcome(); break;
+    case 'tutorial': app.innerHTML = renderTutorial(); break;
+    case 'wiz-name': app.innerHTML = renderWizardName(); break;
+    case 'wiz-days': app.innerHTML = renderWizardDays(); break;
+    case 'wiz-exercises': app.innerHTML = renderWizardExercises(); break;
+    case 'wiz-phone': app.innerHTML = renderWizardPhone(); break;
+    case 'dashboard': app.innerHTML = renderDashboard(); break;
+    case 'routine': app.innerHTML = renderRoutineEditor(); break;
+    case 'train': app.innerHTML = renderTraining(); break;
+    case 'feedback': app.innerHTML = renderFeedback(); break;
+    case 'history': app.innerHTML = renderHistory(); break;
+    case 'import': app.innerHTML = renderImport(); break;
+    default: app.innerHTML = renderWelcome();
+  }
+  bindEvents();
+}
+
+// ============================================================
+// SCREEN: WELCOME
+// ============================================================
+function renderWelcome(){
+  return `
+  <div class="topbar"><div class="brand">BITÁCORA<small>registro personal de entrenamiento</small></div></div>
+  <main>
+    <div class="card">
+      <div class="eyebrow">Sin cuentas · sin servidores</div>
+      <h1 class="step-title">Tu progreso, tuyo.</h1>
+      <p class="hint">Todo se guarda en este navegador. Al terminar cada sesión obtienes un código de estado que puedes copiar y pegar en cualquier otro dispositivo para seguir exactamente donde te quedaste.</p>
+      <button class="btn btn-primary" data-action="start-wizard">Crear mi rutina</button>
+    </div>
+    <div class="card">
+      <div class="section-link" data-action="goto-import">
+        <div><div class="t">Ya tengo un código</div><div class="s">Restaurar perfil desde un estado exportado</div></div>
+        <div class="arrow">→</div>
+      </div>
+    </div>
+  </main>`;
+}
+
+// ============================================================
+// SCREEN: TUTORIAL
+// ============================================================
+function renderTutorial(){
+  const i = state.tutorialIndex || 0;
+  const s = TUTORIAL_SLIDES[i];
+  return `
+  <main style="padding-top:24px;">
+    <div class="progress-dots">${TUTORIAL_SLIDES.map((_,idx)=>`<span class="${idx===i?'active':''}"></span>`).join('')}</div>
+    <div class="card">
+      <div class="tutorial-icon">${s.icon}</div>
+      <div class="eyebrow">${s.eyebrow}</div>
+      <h1 class="step-title">${s.title}</h1>
+      <p class="hint">${s.body}</p>
+      <div class="btn-row">
+        ${i===0 ? `<button class="btn btn-ghost" data-action="tutorial-skip">Saltar</button>` : `<button class="btn btn-ghost" data-action="tutorial-back">Atrás</button>`}
+        <button class="btn btn-primary" data-action="tutorial-next">${i===TUTORIAL_SLIDES.length-1 ? 'Empezar':'Siguiente'}</button>
+      </div>
+    </div>
+  </main>`;
+}
+
+// ============================================================
+// WIZARD: name
+// ============================================================
+function renderWizardName(){
+  return `
+  <main style="padding-top:24px;">
+    <div class="progress-dots"><span class="active"></span><span></span><span></span><span></span></div>
+    <div class="card">
+      <div class="eyebrow">Paso 1 de 4</div>
+      <h1 class="step-title">¿Cómo te llamas?</h1>
+      <p class="hint">No necesitas contraseña. Este nombre identifica tu bitácora.</p>
+      <div class="field"><input id="inp-name" placeholder="Tu nombre" value="${state._draftName||''}"></div>
+      <button class="btn btn-primary" data-action="wiz-name-next">Continuar</button>
+    </div>
+  </main>`;
+}
+
+// ============================================================
+// WIZARD: weekly split (days)
+// ============================================================
+function renderWizardDays(){
+  const days = state.days;
+  return `
+  <main style="padding-top:24px;">
+    <div class="progress-dots"><span class="active"></span><span class="active"></span><span></span><span></span></div>
+    <div class="card">
+      <div class="eyebrow">Paso 2 de 4</div>
+      <h1 class="step-title">Tu división semanal</h1>
+      <p class="hint">Agrega un bloque por cada día de entreno (ej. "Empuje", "Día 1 — Pecho/Tríceps"). El nombre y el orden son totalmente tuyos.</p>
+      ${days.length? days.map((d,i)=>`
+        <div class="exercise-row">
+          <div class="ex-head">
+            <span class="ex-name">${escapeHtml(d.name)}</span>
+            <button class="icon-btn" data-action="remove-day" data-id="${d.id}">✕</button>
+          </div>
+          <div class="ex-meta">${d.exercises.length} ejercicio(s) configurado(s) después</div>
+        </div>`).join('') : `<div class="list-empty">Aún no agregas días</div>`}
+      <div class="field" style="margin-top:10px;">
+        <input id="inp-newday" placeholder="Nombre del día, ej. Piernas">
+      </div>
+      <button class="btn btn-ghost" data-action="add-day" style="margin-bottom:14px;">+ Agregar día</button>
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-action="wiz-days-back">Atrás</button>
+        <button class="btn btn-primary" data-action="wiz-days-next" ${days.length? '':'disabled style="opacity:.4;"'}>Continuar</button>
+      </div>
+    </div>
+  </main>`;
+}
+
+// ============================================================
+// WIZARD: exercises per day
+// ============================================================
+function renderWizardExercises(){
+  const idx = state.wizardDayIndex;
+  const day = state.days[idx];
+  if(!day) return renderDashboardOrWelcome();
+  return `
+  <main style="padding-top:24px;">
+    <div class="progress-dots"><span class="active"></span><span class="active"></span><span class="active"></span><span></span></div>
+    <div class="card">
+      <div class="eyebrow">Paso 3 de 4 · Día ${idx+1} de ${state.days.length}</div>
+      <h1 class="step-title">${escapeHtml(day.name)}</h1>
+      <p class="hint">Agrega los ejercicios de este día. Series, reps y peso son solo tu punto de partida — cada serie real se registra por separado durante el entreno. Puedes anotar altura de banco, posición de polea o cualquier detalle de técnica.</p>
+
+      ${day.exercises.length? day.exercises.map(ex=>renderExerciseSummaryRow(day.id, ex)).join('') : `<div class="list-empty">Sin ejercicios todavía</div>`}
+
+      <div class="field"><label>Ejercicio</label><input id="ex-name" placeholder="Ej. Press banca inclinado"></div>
+      <div class="row3">
+        <div class="field"><label>Series</label><input id="ex-sets" type="number" min="1" placeholder="4"></div>
+        <div class="field"><label>Reps</label><input id="ex-reps" type="number" min="1" placeholder="10"></div>
+        <div class="field"><label>Peso</label><input id="ex-weight" type="number" step="0.5" placeholder="40"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Unidad</label>
+          <select id="ex-unit"><option value="kg">kg</option><option value="lb">lb</option></select>
+        </div>
+        <div class="field"><label>Altura de banco</label><input id="ex-bench" placeholder="Opcional, ej. nivel 3"></div>
+      </div>
+      <div class="field"><label>Polea / agarre</label><input id="ex-pulley" placeholder="Opcional, ej. polea alta, agarre estrecho"></div>
+      <div class="field"><label>Notas</label><textarea id="ex-notes" placeholder="Técnica, sensaciones, referencias..."></textarea></div>
+      <button class="btn btn-ghost" data-action="add-exercise" style="margin-bottom:14px;">+ Agregar ejercicio</button>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-action="wiz-ex-back">Atrás</button>
+        <button class="btn btn-primary" data-action="wiz-ex-next">${idx < state.days.length-1 ? 'Siguiente día' : 'Continuar'}</button>
+      </div>
+    </div>
+  </main>`;
+}
+function renderExerciseSummaryRow(dayId, ex){
+  const meta = [];
+  if(ex.sets||ex.reps||ex.weight) meta.push(`${ex.sets||'—'}x${ex.reps||'—'} @ ${ex.weight||'—'}${ex.unit||'kg'}`);
+  if(ex.bench) meta.push(`Banco: ${escapeHtml(ex.bench)}`);
+  if(ex.pulley) meta.push(`Polea: ${escapeHtml(ex.pulley)}`);
+  return `
+  <div class="exercise-row">
+    <div class="ex-head">
+      <span class="ex-name">${escapeHtml(ex.name)}</span>
+      <button class="icon-btn" data-action="remove-exercise" data-day="${dayId}" data-id="${ex.id}">✕</button>
+    </div>
+    <div class="ex-meta">${meta.join(' · ')}</div>
+    ${ex.notes? `<div class="ex-meta" style="margin-top:4px;font-style:italic;">${escapeHtml(ex.notes)}</div>`:''}
+  </div>`;
+}
+
+// ============================================================
+// WIZARD: phone (creates profile)
+// ============================================================
+function renderWizardPhone(){
+  return `
+  <main style="padding-top:24px;">
+    <div class="progress-dots"><span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span></div>
+    <div class="card">
+      <div class="eyebrow">Paso 4 de 4</div>
+      <h1 class="step-title">Número de teléfono</h1>
+      <p class="hint">Se usa para generar tu identificador único y para dar formato a tu retroalimentación cuando la compartes por WhatsApp. No se envía a ningún servidor.</p>
+      <div class="field"><input id="inp-phone" placeholder="+52 1 449 209 4034" value="${state._draftPhone||''}"></div>
+      <div id="phone-error" style="color:var(--bad);font-size:12px;margin-bottom:10px;display:none;">Ingresa un número válido (mínimo 10 dígitos).</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-action="wiz-phone-back">Atrás</button>
+        <button class="btn btn-primary" data-action="wiz-phone-finish">Crear perfil</button>
+      </div>
+    </div>
+  </main>`;
+}
+
+// ============================================================
+// SCREEN: DASHBOARD
+// ============================================================
+function renderDashboard(){
+  const p = state.profile;
+  return `
+  <div class="topbar">
+    <div class="brand">BITÁCORA<small>${escapeHtml(p.name)}</small></div>
+    <div class="profile-chip" data-action="show-id"><span class="dot"></span>${p.id}</div>
+  </div>
+  <main>
+    <div class="card">
+      <div class="eyebrow">Entrenar</div>
+      ${state.days.length? state.days.map(d=>`
+        <div class="section-link" data-action="start-training" data-id="${d.id}">
+          <div><div class="t">${escapeHtml(d.name)}</div><div class="s">${d.exercises.length} ejercicio(s)</div></div>
+          <div class="arrow">▶</div>
+        </div>`).join('') : `<div class="list-empty">Agrega días en "Editar rutina"</div>`}
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Progreso</div>
+      <div class="section-link" data-action="goto-history">
+        <div><div class="t">Historial de sesiones</div><div class="s">${state.history.length} sesión(es) registradas</div></div>
+        <div class="arrow">→</div>
+      </div>
+      <div class="section-link" data-action="goto-routine">
+        <div><div class="t">Editar rutina</div><div class="s">Días, ejercicios y variables</div></div>
+        <div class="arrow">→</div>
+      </div>
+      <div class="section-link" data-action="view-tutorial">
+        <div><div class="t">¿Cómo funciona?</div><div class="s">Repasar el tutorial</div></div>
+        <div class="arrow">→</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Estado portable</div>
+      <p class="hint">Copia tu código para continuar en otro dispositivo, o guárdalo como respaldo.</p>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" data-action="copy-export" style="flex:1;">Copiar código</button>
+        <button class="btn btn-ghost btn-sm" data-action="goto-import" style="flex:1;">Cargar código</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-danger btn-sm" data-action="wipe-local">Borrar datos de este dispositivo</button>
+    </div>
+  </main>`;
+}
+
+// ============================================================
+// SCREEN: ROUTINE EDITOR
+// ============================================================
+function renderRoutineEditor(){
+  return `
+  <div class="topbar"><div class="brand">RUTINA<small>editar días y ejercicios</small></div></div>
+  <main>
+    <div class="card" style="padding:12px 14px;">
+      <p class="hint" style="margin:0;">Series/reps/peso aquí son solo tu punto de partida. Los valores reales de cada serie se ajustan durante el entreno.</p>
+    </div>
+    ${state.days.map(day=>`
+      <div class="card day-block">
+        <div class="ex-head" style="margin-bottom:10px;">
+          <div class="day-block-title">${escapeHtml(day.name)}</div>
+          <button class="icon-btn" data-action="remove-day-live" data-id="${day.id}">✕</button>
+        </div>
+        ${day.exercises.length? day.exercises.map(ex=>renderExerciseSummaryRow(day.id, ex)).join(''):`<div class="list-empty">Sin ejercicios</div>`}
+        <details style="margin-top:8px;">
+          <summary style="cursor:pointer;color:var(--accent);font-family:var(--mono);font-size:11px;letter-spacing:1px;">+ AGREGAR EJERCICIO</summary>
+          <div style="margin-top:10px;">
+            <div class="field"><input placeholder="Nombre del ejercicio" class="live-ex-name" data-day="${day.id}"></div>
+            <div class="row3">
+              <input type="number" placeholder="Series" class="live-ex-sets" data-day="${day.id}">
+              <input type="number" placeholder="Reps" class="live-ex-reps" data-day="${day.id}">
+              <input type="number" step="0.5" placeholder="Peso" class="live-ex-weight" data-day="${day.id}">
+            </div>
+            <div class="row2" style="margin-top:8px;">
+              <select class="live-ex-unit" data-day="${day.id}"><option value="kg">kg</option><option value="lb">lb</option></select>
+              <input placeholder="Altura banco" class="live-ex-bench" data-day="${day.id}">
+            </div>
+            <input placeholder="Polea / agarre" class="live-ex-pulley" data-day="${day.id}" style="margin-top:8px;">
+            <textarea placeholder="Notas" class="live-ex-notes" data-day="${day.id}" style="margin-top:8px;"></textarea>
+            <button class="btn btn-ghost btn-sm" data-action="add-exercise-live" data-day="${day.id}" style="margin-top:8px;">Guardar ejercicio</button>
+          </div>
+        </details>
+      </div>
+    `).join('')}
+    <div class="card">
+      <div class="field"><input id="inp-newday-live" placeholder="Nuevo día, ej. Espalda/Bíceps"></div>
+      <button class="btn btn-ghost" data-action="add-day-live">+ Agregar día</button>
+    </div>
+    <button class="btn btn-primary" data-action="back-dashboard">Listo</button>
+  </main>`;
+}
+
+// ============================================================
+// SCREEN: TRAINING (per-set logging)
+// ============================================================
+function renderTraining(){
+  const day = findDay(state.trainDayId);
+  if(!day || !trainingDraft) return renderDashboard();
+  return `
+  <div class="topbar"><div class="brand">${escapeHtml(day.name).toUpperCase()}<small>modo entrenamiento</small></div></div>
+  <main>
+    <div class="card" style="padding:12px 14px;">
+      <p class="hint" style="margin:0;">Registra cada serie por separado. Si cambias el peso a mitad de rutina, toca "+ Agregar serie" en vez de duplicar el ejercicio.</p>
+    </div>
+    ${day.exercises.map(ex=>renderTrainExerciseCard(ex)).join('')}
+    <button class="btn btn-primary" data-action="finish-session">Finalizar sesión</button>
+    <button class="btn btn-ghost" data-action="back-dashboard">Cancelar</button>
+  </main>`;
+}
+function renderTrainExerciseCard(ex){
+  const d = trainingDraft.exercises[ex.id];
+  return `
+  <div class="ex-train-card ${d.completed?'done':''}" id="card-${ex.id}">
+    <div class="ex-train-head">
+      <div class="checkbox ${d.completed?'checked':''}" data-action="toggle-done" data-id="${ex.id}">${d.completed?'✓':''}</div>
+      <div class="ex-train-title">${escapeHtml(ex.name)}</div>
+    </div>
+    ${d.sets.map((s,i)=>renderSetRow(ex.id,i,s)).join('')}
+    <button class="btn btn-ghost btn-sm" data-action="add-set" data-ex="${ex.id}" style="margin:6px 0 10px;">+ Agregar serie</button>
+    <div class="ex-fields2">
+      <div class="field"><label>Banco</label><input data-role="ex-bench" data-ex="${ex.id}" value="${escapeHtml(d.bench)}"></div>
+      <div class="field"><label>Polea</label><input data-role="ex-pulley" data-ex="${ex.id}" value="${escapeHtml(d.pulley)}"></div>
+    </div>
+    <div class="field"><label>Notas</label><textarea class="small-note" data-role="ex-notes" data-ex="${ex.id}">${escapeHtml(d.notes)}</textarea></div>
+  </div>`;
+}
+function renderSetRow(exId, idx, s){
+  return `
+  <div class="set-row">
+    <span class="set-idx">S${idx+1}</span>
+    <div class="stepper">
+      <button data-action="step" data-ex="${exId}" data-idx="${idx}" data-field="reps" data-delta="-1">−</button>
+      <input type="number" data-role="set-reps" data-ex="${exId}" data-idx="${idx}" value="${s.reps}" placeholder="reps">
+      <button data-action="step" data-ex="${exId}" data-idx="${idx}" data-field="reps" data-delta="1">+</button>
+    </div>
+    <div class="stepper">
+      <button data-action="step" data-ex="${exId}" data-idx="${idx}" data-field="weight" data-delta="-2.5">−</button>
+      <input type="number" step="0.5" data-role="set-weight" data-ex="${exId}" data-idx="${idx}" value="${s.weight}" placeholder="peso">
+      <button data-action="step" data-ex="${exId}" data-idx="${idx}" data-field="weight" data-delta="2.5">+</button>
+    </div>
+    ${idx>0? `<button class="icon-btn" data-action="remove-set" data-ex="${exId}" data-idx="${idx}">✕</button>` : `<span class="set-spacer"></span>`}
+  </div>`;
+}
+
+// ============================================================
+// SCREEN: FEEDBACK
+// ============================================================
+function renderFeedback(){
+  const fb = state.lastFeedback;
+  if(!fb) return renderDashboard();
+  return `
+  <div class="topbar"><div class="brand">RESUMEN<small>${escapeHtml(fb.dayName)} · ${fmtDate(fb.date)}</small></div></div>
+  <main>
+    <div class="card ticket">
+      <div class="eyebrow">Comparado con tu sesión anterior</div>
+      ${fb.rows.map(r=>`
+        <div class="compare-row">
+          <div class="compare-name">${escapeHtml(r.name)}</div>
+          <div class="compare-status ${r.cls}">${r.text}</div>
+        </div>
+      `).join('')}
+      <div style="margin-top:14px;font-size:13px;color:var(--text2);">
+        ✅ ${fb.completedCount}/${fb.total} completados
+      </div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Compartir</div>
+      <div class="btn-row" style="margin-bottom:10px;">
+        <button class="btn btn-ghost btn-sm" data-action="copy-whatsapp" style="flex:1;">Copiar para WhatsApp</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" data-action="copy-export" style="flex:1;">Copiar código de estado</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" data-action="back-dashboard">Volver al panel</button>
+  </main>`;
+}
+
+// ============================================================
+// SCREEN: HISTORY
+// ============================================================
+function renderHistory(){
+  const items = [...state.history].reverse();
+  return `
+  <div class="topbar"><div class="brand">HISTORIAL<small>sesiones registradas</small></div></div>
+  <main>
+    <div class="card">
+      ${items.length? items.map(h=>{
+        const done = h.entries.filter(e=>e.completed).length;
+        return `<div class="history-item">
+          <div class="h-top"><span class="h-day">${escapeHtml(h.dayName)}</span><span class="h-date">${fmtDate(h.date)}</span></div>
+          <div class="h-stat">${done}/${h.entries.length} completados</div>
+        </div>`;
+      }).join('') : `<div class="list-empty">Todavía no hay sesiones</div>`}
+    </div>
+    <button class="btn btn-primary" data-action="back-dashboard">Volver</button>
+  </main>`;
+}
+
+// ============================================================
+// SCREEN: IMPORT
+// ============================================================
+function renderImport(){
+  return `
+  <div class="topbar"><div class="brand">CARGAR ESTADO<small>pegar código exportado</small></div></div>
+  <main>
+    <div class="card">
+      <p class="hint">Pega aquí el código que copiaste antes. Esto reemplaza los datos locales de este dispositivo por los del código.</p>
+      <div class="field"><textarea id="import-code" placeholder="Pega tu código aquí" style="min-height:140px;"></textarea></div>
+      <div id="import-error" style="color:var(--bad);font-size:12px;margin-bottom:10px;display:none;">Ese código no es válido.</div>
+      <button class="btn btn-primary" data-action="do-import">Restaurar</button>
+    </div>
+    <button class="btn btn-ghost" data-action="back-welcome-or-dashboard">Cancelar</button>
+  </main>`;
+}
+
+function renderDashboardOrWelcome(){ return state.profile ? renderDashboard() : renderWelcome(); }
+
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ============================================================
+// EVENTS
+// ============================================================
+function bindEvents(){
+  document.querySelectorAll('[data-action]').forEach(el=>{
+    el.addEventListener('click', handleAction);
+  });
+  document.querySelectorAll('[data-role]').forEach(el=>{
+    el.addEventListener('input', handleDraftInput);
+  });
+}
+
+function handleDraftInput(e){
+  if(!trainingDraft) return;
+  const el = e.currentTarget;
+  const role = el.dataset.role;
+  const exId = el.dataset.ex;
+  const d = trainingDraft.exercises[exId];
+  if(!d) return;
+  if(role==='set-reps'){ d.sets[parseInt(el.dataset.idx)].reps = el.value; }
+  else if(role==='set-weight'){ d.sets[parseInt(el.dataset.idx)].weight = el.value; }
+  else if(role==='ex-bench'){ d.bench = el.value; }
+  else if(role==='ex-pulley'){ d.pulley = el.value; }
+  else if(role==='ex-notes'){ d.notes = el.value; }
+}
+
+function handleAction(e){
+  const el = e.currentTarget;
+  const action = el.dataset.action;
+  const id = el.dataset.id;
+  const dayId = el.dataset.day;
+  const exAttr = el.dataset.ex;
+  const idxAttr = el.dataset.idx;
+  const field = el.dataset.field;
+  const delta = el.dataset.delta;
+
+  switch(action){
+    case 'start-wizard':
+      state.tutorialIndex = 0;
+      state.tutorialReturn = 'wiz-name';
+      goto('tutorial');
+      break;
+    case 'view-tutorial':
+      state.tutorialIndex = 0;
+      state.tutorialReturn = 'dashboard';
+      goto('tutorial');
+      break;
+    case 'tutorial-skip': goto(state.tutorialReturn); break;
+    case 'tutorial-back':
+      if(state.tutorialIndex>0){ state.tutorialIndex--; render(); } else goto(state.tutorialReturn);
+      break;
+    case 'tutorial-next':
+      if(state.tutorialIndex < TUTORIAL_SLIDES.length-1){ state.tutorialIndex++; render(); }
+      else goto(state.tutorialReturn);
+      break;
+
+    case 'wiz-name-next': {
+      const v = document.getElementById('inp-name').value.trim();
+      if(!v){ toast('Escribe tu nombre'); return; }
+      state._draftName = v;
+      goto('wiz-days'); break;
+    }
+    case 'wiz-days-back': goto('wiz-name'); break;
+    case 'add-day': {
+      const inp = document.getElementById('inp-newday');
+      const v = inp.value.trim();
+      if(!v) return;
+      state.days.push({id:uid(), name:v, exercises:[]});
+      inp.value='';
+      render(); break;
+    }
+    case 'remove-day': state.days = state.days.filter(d=>d.id!==id); render(); break;
+    case 'wiz-days-next': state.wizardDayIndex = 0; goto('wiz-exercises'); break;
+
+    case 'wiz-ex-back':
+      if(state.wizardDayIndex>0){ state.wizardDayIndex--; render(); } else goto('wiz-days');
+      break;
+    case 'add-exercise': {
+      const day = state.days[state.wizardDayIndex];
+      const name = document.getElementById('ex-name').value.trim();
+      if(!name){ toast('Ponle nombre al ejercicio'); return; }
+      day.exercises.push({
+        id: uid(), name,
+        sets: document.getElementById('ex-sets').value,
+        reps: document.getElementById('ex-reps').value,
+        weight: document.getElementById('ex-weight').value,
+        unit: document.getElementById('ex-unit').value,
+        bench: document.getElementById('ex-bench').value.trim(),
+        pulley: document.getElementById('ex-pulley').value.trim(),
+        notes: document.getElementById('ex-notes').value.trim()
+      });
+      render(); break;
+    }
+    case 'remove-exercise': {
+      const day = findDay(dayId);
+      day.exercises = day.exercises.filter(ex=>ex.id!==id);
+      render(); break;
+    }
+    case 'wiz-ex-next':
+      if(state.wizardDayIndex < state.days.length-1){ state.wizardDayIndex++; render(); }
+      else goto('wiz-phone');
+      break;
+
+    case 'wiz-phone-back': goto('wiz-exercises'); break;
+    case 'wiz-phone-finish': {
+      const phone = document.getElementById('inp-phone').value.trim();
+      const digits = phone.replace(/\D/g,'');
+      if(digits.length<10){ document.getElementById('phone-error').style.display='block'; return; }
+      state._draftPhone = phone;
+      const profileId = ('BX-'+digits.slice(-4)+'-'+uid().slice(-4)).toUpperCase();
+      state.profile = { id: profileId, name: state._draftName, phone, createdAt: new Date().toISOString() };
+      delete state._draftName; delete state._draftPhone;
+      saveState();
+      goto('dashboard');
+      toast('Perfil creado. Guarda tu código como respaldo.');
+      break;
+    }
+
+    case 'start-training':
+      state.trainDayId = id;
+      trainingDraft = buildTrainingDraft(findDay(id));
+      goto('train');
+      break;
+    case 'toggle-done': {
+      trainingDraft.exercises[id].completed = !trainingDraft.exercises[id].completed;
+      render(); break;
+    }
+    case 'add-set': {
+      const d = trainingDraft.exercises[exAttr];
+      const last = d.sets[d.sets.length-1] || {reps:'',weight:''};
+      d.sets.push({reps:last.reps, weight:last.weight});
+      render(); break;
+    }
+    case 'remove-set': {
+      const d = trainingDraft.exercises[exAttr];
+      d.sets.splice(parseInt(idxAttr),1);
+      if(d.sets.length===0) d.sets.push({reps:'',weight:''});
+      render(); break;
+    }
+    case 'step': {
+      const d = trainingDraft.exercises[exAttr];
+      const s = d.sets[parseInt(idxAttr)];
+      const cur = parseFloat(s[field]) || 0;
+      let next = cur + parseFloat(delta);
+      if(next<0) next=0;
+      s[field] = (Number.isInteger(next)? next : Math.round(next*10)/10).toString();
+      render(); break;
+    }
+    case 'finish-session': finishSession(); break;
+    case 'back-dashboard': trainingDraft=null; goto('dashboard'); break;
+    case 'goto-routine': goto('routine'); break;
+    case 'goto-history': goto('history'); break;
+    case 'goto-import': goto('import'); break;
+    case 'back-welcome-or-dashboard': goto(state.profile? 'dashboard':'welcome'); break;
+
+    case 'add-day-live': {
+      const inp = document.getElementById('inp-newday-live');
+      const v = inp.value.trim();
+      if(!v) return;
+      state.days.push({id:uid(), name:v, exercises:[]});
+      saveState(); render(); break;
+    }
+    case 'remove-day-live':
+      state.days = state.days.filter(d=>d.id!==id);
+      saveState(); render(); break;
+    case 'add-exercise-live': {
+      const day = findDay(dayId);
+      const name = document.querySelector(`.live-ex-name[data-day="${dayId}"]`).value.trim();
+      if(!name){ toast('Ponle nombre al ejercicio'); return; }
+      day.exercises.push({
+        id: uid(), name,
+        sets: document.querySelector(`.live-ex-sets[data-day="${dayId}"]`).value,
+        reps: document.querySelector(`.live-ex-reps[data-day="${dayId}"]`).value,
+        weight: document.querySelector(`.live-ex-weight[data-day="${dayId}"]`).value,
+        unit: document.querySelector(`.live-ex-unit[data-day="${dayId}"]`).value,
+        bench: document.querySelector(`.live-ex-bench[data-day="${dayId}"]`).value.trim(),
+        pulley: document.querySelector(`.live-ex-pulley[data-day="${dayId}"]`).value.trim(),
+        notes: document.querySelector(`.live-ex-notes[data-day="${dayId}"]`).value.trim()
+      });
+      saveState(); render(); break;
+    }
+
+    case 'copy-export': copyToClipboard(exportCode(), 'Código copiado al portapapeles'); break;
+    case 'copy-whatsapp': copyToClipboard(buildWhatsAppText(state.lastFeedback), 'Texto copiado, listo para pegar en WhatsApp'); break;
+    case 'do-import': {
+      const code = document.getElementById('import-code').value;
+      try{ importCode(code); goto('dashboard'); toast('Estado restaurado'); }
+      catch(err){ document.getElementById('import-error').style.display='block'; }
+      break;
+    }
+    case 'wipe-local':
+      if(confirm('Esto borra tus datos de este dispositivo. Si no tienes un código exportado, se pierde tu progreso. ¿Continuar?')){
+        localStorage.removeItem(STORAGE_KEY);
+        state = defaultState();
+        trainingDraft = null;
+        goto('welcome');
+      }
+      break;
+    case 'show-id': toast('ID de perfil: '+state.profile.id); break;
+  }
+}
+
+function copyToClipboard(text, msg){
+  navigator.clipboard.writeText(text).then(()=>toast(msg)).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    toast(msg);
+  });
+}
+
+// ============================================================
+// FINISH SESSION -> compute feedback, save history
+// ============================================================
+function finishSession(){
+  const day = findDay(state.trainDayId);
+  const entries = day.exercises.map(ex=>{
+    const d = trainingDraft.exercises[ex.id];
+    return {
+      exerciseId: ex.id,
+      name: ex.name,
+      completed: d.completed,
+      sets: d.sets.map(s=>({reps:s.reps, weight:s.weight})),
+      bench: d.bench,
+      pulley: d.pulley,
+      notes: d.notes
+    };
+  });
+
+  const rows = entries.map(en=>{
+    if(!en.completed) return {name:en.name, cls:'skip', text:'⚠ omitido'};
+    const prev = lastEntryFor(en.exerciseId, state.history);
+    const cur = setStats(en.sets);
+    if(!prev) return {name:en.name, cls:'same', text:`primer registro · top ${cur.top||'—'} · vol ${cur.volume}`};
+    const prv = setStats(entrySets(prev));
+    let cls='same', arrow='=';
+    if(cur.top>prv.top || (cur.top===prv.top && cur.volume>prv.volume)){cls='up';arrow='▲';}
+    else if(cur.top<prv.top || (cur.top===prv.top && cur.volume<prv.volume)){cls='down';arrow='▼';}
+    return {name:en.name, cls, text:`${arrow} top ${prv.top||'—'}→${cur.top||'—'} · vol ${prv.volume}→${cur.volume}`};
+  });
+
+  const newHistoryEntry = { id: uid(), date: new Date().toISOString(), dayId: day.id, dayName: day.name, entries };
+  state.history.push(newHistoryEntry);
+
+  state.lastFeedback = {
+    date: newHistoryEntry.date, dayName: day.name, rows,
+    completedCount: entries.filter(e=>e.completed).length, total: entries.length
+  };
+  trainingDraft = null;
+  saveState();
+  goto('feedback');
+}
+
+function buildWhatsAppText(fb){
+  const lines = [];
+  lines.push(`*Bitácora — ${fb.dayName}*`);
+  lines.push(fmtDate(fb.date));
+  lines.push('');
+  fb.rows.forEach(r=>{
+    const mark = r.cls==='up'?'⬆️':r.cls==='down'?'⬇️':r.cls==='skip'?'⚠️':'➖';
+    lines.push(`${mark} ${r.name}: ${r.text}`);
+  });
+  lines.push('');
+  lines.push(`✅ ${fb.completedCount}/${fb.total} ejercicios completados`);
+  return lines.join('\n');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+render();
+</script>
+</body>
+</html>
