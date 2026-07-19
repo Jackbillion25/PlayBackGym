@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro'
+import ThemeToggle from '../components/layout/ThemeToggle.astro'
+import Footer from '../components/layout/Footer.astro'
+import AuthForms from '../components/islands/AuthForms.tsx'
+
+if (Astro.locals.user) return Astro.redirect('/app')
+---
+
+<Base title="Inicia sesión — Bitácora">
+  <div class="app-shell">
+    <div class="topbar">
+      <a href="/" class="brand">Bitácora<small>registro personal de entrenamiento</small></a>
+      <div class="topbar-actions"><ThemeToggle /></div>
+    </div>
+    <main class="app-main" style="padding-top:8px;">
+      <AuthForms mode="login" client:load />
+    </main>
+    <Footer />
+  </div>
+</Base>

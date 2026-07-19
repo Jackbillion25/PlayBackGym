@@ -1,0 +1,70 @@
+---
+import Base from '../layouts/Base.astro'
+import ThemeToggle from '../components/layout/ThemeToggle.astro'
+import Footer from '../components/layout/Footer.astro'
+
+// Si ya hay sesión, al panel
+if (Astro.locals.user) return Astro.redirect('/app')
+
+const features = [
+  {
+    icon: 'fa-solid fa-list-check',
+    title: 'Cada serie por separado',
+    text: 'Registra reps y peso de cada serie con botones +/− rápidos. Con guantes puestos, sin fricción.',
+  },
+  {
+    icon: 'fa-solid fa-arrow-trend-up',
+    title: 'Comparación automática',
+    text: 'Al terminar, compara tu peso máximo y total levantado contra tu última sesión. Sabes si mejoraste.',
+  },
+  {
+    icon: 'fa-solid fa-stopwatch',
+    title: 'Cronómetro y descansos',
+    text: 'Cronómetro siempre visible y timer de descanso configurable para medir tus pausas al segundo.',
+  },
+  {
+    icon: 'fa-brands fa-whatsapp',
+    title: 'Comparte por WhatsApp',
+    text: 'Tu resumen queda listo para copiar y pegar en un toque. Presume tu progreso.',
+  },
+]
+---
+
+<Base title="Bitácora — Tu registro de entrenamiento">
+  <div class="topbar" style="max-width:1000px;margin:0 auto;">
+    <div class="brand">Bitácora</div>
+    <div class="topbar-actions">
+      <ThemeToggle />
+      <a href="/login" class="btn btn-ghost btn-sm">Entrar</a>
+    </div>
+  </div>
+
+  <div class="landing">
+    <section class="hero">
+      <span class="kicker"><i class="fa-solid fa-dumbbell"></i> Tu bitácora de entrenamiento</span>
+      <h1>Registra cada serie.<br /><span class="accent">Mira tu progreso.</span></h1>
+      <p class="tagline">
+        Arma tu rutina, registra reps y peso serie por serie, y recibe retroalimentación automática
+        comparada contra tu sesión anterior.
+      </p>
+      <div class="cta-wide">
+        <a href="/registro" class="btn btn-primary">Crear cuenta gratis</a>
+      </div>
+      <p class="credit">Una idea de <strong>LUKAMON</strong></p>
+    </section>
+
+    <section class="features">
+      {
+        features.map((f) => (
+          <div class="feature">
+            <span class="fa-icon"><i class={f.icon} /></span>
+            <h3>{f.title}</h3>
+            <p>{f.text}</p>
+          </div>
+        ))
+      }
+    </section>
+  </div>
+
+  <Footer />
+</Base>

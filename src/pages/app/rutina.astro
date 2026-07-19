@@ -1,0 +1,15 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro'
+import { createDb } from '../../server/db'
+import { cfEnv } from '../../server/runtime'
+import { routineTree } from '../../server/pages-data'
+import RoutineEditor from '../../components/islands/RoutineEditor.tsx'
+
+const user = Astro.locals.user!
+const db = createDb(cfEnv.DB)
+const days = await routineTree(db, user.id)
+---
+
+<AppLayout brand="Rutina" subtitle="editar días y ejercicios" back="/app" title="Rutina — Bitácora">
+  <RoutineEditor initialDays={days} client:load />
+</AppLayout>

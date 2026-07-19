@@ -1,0 +1,88 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro'
+import WelcomeTutorial from '../../components/islands/WelcomeTutorial.tsx'
+import { createDb } from '../../server/db'
+import { cfEnv } from '../../server/runtime'
+import { routineTree } from '../../server/pages-data'
+import { eq, count } from 'drizzle-orm'
+import { workoutSession } from '../../server/db/schema'
+
+const user = Astro.locals.user!
+const db = createDb(cfEnv.DB)
+
+const days = await routineTree(db, user.id)
+const [{ value: sessionCount } = { value: 0 }] = await db
+  .select({ value: count() })
+  .from(workoutSession)
+  .where(eq(workoutSession.userId, user.id))
+---
+
+<AppLayout brand="Bitácora" subtitle={user.name} title="Panel — Bitácora">
+  <a slot="actions" href="/app/perfil" class="profile-chip">
+    <span class="dot"></span>{user.name?.split(' ')[0] ?? 'Perfil'}
+  </a>
+
+  <div class="card" data-tour="entrenar">
+    <div class="eyebrow">Entrenar</div>
+    {
+      days.length ? (
+        days.map((d) => (
+          <a class="section-link" href={`/app/entrenar/${d.id}`}>
+            <div>
+              <div class="t">{d.name}</div>
+              <div class="s">{d.exercises.length} ejercicio(s)</div>
+            </div>
+            <div class="arrow"><i class="fa-solid fa-play"></i></div>
+          </a>
+        ))
+      ) : (
+        <div class="list-empty">Agrega días en "Editar rutina" para empezar</div>
+      )
+    }
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Progreso</div>
+    <a class="section-link" href="/app/historial">
+      <div>
+        <div class="t"><i class="fa-solid fa-clock-rotate-left"></i> Historial de sesiones</div>
+        <div class="s">{sessionCount} sesión(es) registradas</div>
+      </div>
+      <div class="arrow"><i class="fa-solid fa-chevron-right"></i></div>
+    </a>
+    <a class="section-link" href="/app/rutina" data-tour="rutina">
+      <div>
+        <div class="t"><i class="fa-solid fa-dumbbell"></i> Editar rutina</div>
+        <div class="s">Días, ejercicios y variables</div>
+      </div>
+      <div class="arrow"><i class="fa-solid fa-chevron-right"></i></div>
+    </a>
+    <a class="section-link" href="/app/perfil" data-tour="perfil">
+      <div>
+        <div class="t"><i class="fa-solid fa-user"></i> Perfil</div>
+        <div class="s">Nombre, teléfono, tema, cuenta</div>
+      </div>
+      <div class="arrow"><i class="fa-solid fa-chevron-right"></i></div>
+    </a>
+  </div>
+
+  {
+    days.length === 0 && (
+      <div class="card">
+        <div class="eyebrow">Cómo funciona</div>
+        <p class="hint" style="margin-bottom:6px;">
+          <strong style="color:var(--text);">1.</strong> Arma tus días (Empuje, Piernas…) y sus ejercicios como punto de partida.
+        </p>
+        <p class="hint" style="margin-bottom:6px;">
+          <strong style="color:var(--text);">2.</strong> Al entrenar, registra <strong style="color:var(--text);">cada serie</strong> con reps y peso.
+        </p>
+        <p class="hint" style="margin-bottom:14px;">
+          <strong style="color:var(--text);">3.</strong> Al terminar, compara contra tu sesión anterior y comparte por WhatsApp.
+        </p>
+        <a href="/app/rutina" class="btn btn-primary">Crear mi rutina</a>
+      </div>
+    )
+  }
+
+  <WelcomeTutorial client:load />
+</AppLayout>

@@ -1,0 +1,42 @@
+---
+import Base from '../../../layouts/Base.astro'
+import ThemeToggle from '../../../components/layout/ThemeToggle.astro'
+import TrainingSession from '../../../components/islands/TrainingSession.tsx'
+import { createDb } from '../../../server/db'
+import { cfEnv } from '../../../server/runtime'
+import { prefillForDay } from '../../../server/pages-data'
+
+const { dayId } = Astro.params
+const user = Astro.locals.user!
+const db = createDb(cfEnv.DB)
+const prefill = await prefillForDay(db, user.id, dayId!)
+
+if (!prefill) return Astro.redirect('/app')
+const hasExercises = prefill.exercises.length > 0
+---
+
+<Base title={`${prefill.day.name} — Entrenamiento`}>
+  <div class="app-shell">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px 0;">
+      <a href="/app" class="icon-btn" aria-label="Volver" style="color:var(--text2);">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <ThemeToggle />
+    </div>
+
+    {
+      hasExercises ? (
+        <TrainingSession prefill={prefill} userPhone={(user as { phone?: string | null }).phone ?? null} client:load />
+      ) : (
+        <main class="app-main" style="padding-top:16px;">
+          <div class="card">
+            <div class="eyebrow">{prefill.day.name}</div>
+            <h1 class="step-title">Este día no tiene ejercicios</h1>
+            <p class="hint">Agrega ejercicios en tu rutina para poder entrenar este día.</p>
+            <a href="/app/rutina" class="btn btn-primary">Editar rutina</a>
+          </div>
+        </main>
+      )
+    }
+  </div>
+</Base>

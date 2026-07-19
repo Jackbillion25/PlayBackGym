@@ -1,0 +1,13 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro'
+import ProfileForm from '../../components/islands/ProfileForm.tsx'
+
+const user = Astro.locals.user!
+---
+
+<AppLayout brand="Perfil" subtitle={user.name} back="/app" title="Perfil — Bitácora">
+  <ProfileForm
+    initial={{ name: user.name, email: user.email, phone: (user as { phone?: string | null }).phone ?? null }}
+    client:load
+  />
+</AppLayout>

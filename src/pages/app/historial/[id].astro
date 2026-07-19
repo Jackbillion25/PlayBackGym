@@ -1,0 +1,50 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro'
+import { createDb } from '../../../server/db'
+import { cfEnv } from '../../../server/runtime'
+import { sessionDetail } from '../../../server/pages-data'
+import { fmtDate, fmtWeight } from '../../../lib/format'
+
+const { id } = Astro.params
+const user = Astro.locals.user!
+const db = createDb(cfEnv.DB)
+const detail = await sessionDetail(db, user.id, id!)
+
+if (!detail) return Astro.redirect('/app/historial')
+---
+
+<AppLayout brand="Sesión" subtitle={detail.dayName} back="/app/historial" title={`${detail.dayName} — Sesión`}>
+  <div class="card" style="padding:12px 14px;">
+    <div class="eyebrow">{detail.dayName}</div>
+    <div class="hint" style="margin:0;">{fmtDate(detail.finishedAt)}</div>
+  </div>
+
+  {
+    detail.entries.map((e) => (
+      <div class={`card ${e.completed ? '' : ''}`} style={`border-color:${e.completed ? 'var(--good)' : 'var(--border)'};`}>
+        <div class="ex-head" style="margin-bottom:8px;">
+          <span class="ex-name" style="font-weight:700;">
+            {e.completed ? (
+              <i class="fa-solid fa-check" style="color:var(--good);"></i>
+            ) : (
+              <i class="fa-solid fa-forward" style="color:var(--bad);"></i>
+            )}{' '}
+            {e.exerciseName}
+          </span>
+        </div>
+        {e.sets.map((s, i) => (
+          <div class="ex-meta">
+            S{i + 1}: {s.reps ?? '—'} reps · {fmtWeight(s.weight)}
+          </div>
+        ))}
+        {(e.bench || e.pulley) && (
+          <div class="ex-meta" style="margin-top:6px;">
+            {e.bench && <span>Banco: {e.bench} </span>}
+            {e.pulley && <span>· Polea: {e.pulley}</span>}
+          </div>
+        )}
+        {e.notes && <div class="ex-meta" style="margin-top:4px;font-style:italic;">{e.notes}</div>}
+      </div>
+    ))
+  }
+</AppLayout>

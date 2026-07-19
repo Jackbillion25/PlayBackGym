@@ -1,0 +1,38 @@
+---
+import Base from './Base.astro'
+import ThemeToggle from '../components/layout/ThemeToggle.astro'
+import Footer from '../components/layout/Footer.astro'
+
+interface Props {
+  brand: string
+  subtitle?: string
+  back?: string
+  title?: string
+}
+const { brand, subtitle, back, title } = Astro.props
+---
+
+<Base title={title ?? `${brand} — Bitácora`}>
+  <div class="app-shell">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        {
+          back && (
+            <a href={back} class="icon-btn" aria-label="Volver" style="color:var(--text2);">
+              <i class="fa-solid fa-arrow-left"></i>
+            </a>
+          )
+        }
+        <div class="brand">{brand}{subtitle && <small>{subtitle}</small>}</div>
+      </div>
+      <div class="topbar-actions">
+        <ThemeToggle />
+        <slot name="actions" />
+      </div>
+    </div>
+    <main class="app-main">
+      <slot />
+    </main>
+    <Footer />
+  </div>
+</Base>

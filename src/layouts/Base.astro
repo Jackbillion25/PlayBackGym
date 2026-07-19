@@ -1,0 +1,42 @@
+---
+import '../styles/global.css'
+
+interface Props {
+  title?: string
+  description?: string
+  wide?: boolean
+}
+
+const {
+  title = 'Bitácora — Registro de entrenamiento',
+  description = 'Registra cada serie, compara contra tu sesión anterior y comparte por WhatsApp. Una idea de LUKAMON.',
+} = Astro.props
+---
+
+<!doctype html>
+<html lang="es-MX">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0f1512" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f7f6" media="(prefers-color-scheme: light)" />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <!-- Tema sin parpadeo: aplica la preferencia guardada antes de pintar -->
+    <script is:inline>
+      ;(() => {
+        try {
+          const t = localStorage.getItem('bitacora-theme')
+          if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

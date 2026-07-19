@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro'
+import ThemeToggle from '../components/layout/ThemeToggle.astro'
+import Footer from '../components/layout/Footer.astro'
+
+// Si al llegar ya hay sesión (verificación con auto sign-in), al panel.
+if (Astro.locals.user?.emailVerified) return Astro.redirect('/app')
+const error = Astro.url.searchParams.get('error')
+---
+
+<Base title="Verifica tu correo — Bitácora">
+  <div class="app-shell">
+    <div class="topbar">
+      <a href="/" class="brand">Bitácora<small>registro personal de entrenamiento</small></a>
+      <div class="topbar-actions"><ThemeToggle /></div>
+    </div>
+    <main class="app-main" style="padding-top:8px;">
+      <div class="card">
+        <div class="tutorial-icon"><i class="fa-solid fa-envelope-circle-check"></i></div>
+        <div class="eyebrow">Verificación</div>
+        <h1 class="step-title">Revisa tu correo</h1>
+        {
+          error ? (
+            <p class="hint">
+              El enlace es inválido o expiró. Inicia sesión para recibir uno nuevo.
+            </p>
+          ) : (
+            <p class="hint">
+              Te enviamos un enlace de verificación. Ábrelo desde tu correo para activar tu cuenta y
+              empezar a registrar tus entrenamientos.
+            </p>
+          )
+        }
+        <a href="/login" class="btn btn-primary">Ir a iniciar sesión</a>
+      </div>
+    </main>
+    <Footer />
+  </div>
+</Base>
