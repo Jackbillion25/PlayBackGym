@@ -18,6 +18,7 @@ const entrySchema = z.object({
   completed: z.boolean(),
   bench: z.string().trim().max(60).default(''),
   pulley: z.string().trim().max(60).default(''),
+  extraWeight: z.string().trim().max(60).default(''),
   notes: z.string().trim().max(500).default(''),
   sets: z.array(setSchema).max(50),
 })
@@ -72,6 +73,7 @@ export const sessionsRoutes = new Hono<ApiEnv>()
       completed: boolean
       bench: string
       pulley: string
+      extraWeight: string
       notes: string
       position: number
       sets: { reps: number | null; weight: number | null }[]
@@ -96,6 +98,7 @@ export const sessionsRoutes = new Hono<ApiEnv>()
         completed: e.completed,
         bench: e.bench,
         pulley: e.pulley,
+        extraWeight: e.extraWeight,
         notes: e.notes,
         position: position++,
         sets: e.sets,
@@ -122,6 +125,7 @@ export const sessionsRoutes = new Hono<ApiEnv>()
           completed: er.completed,
           bench: er.bench || null,
           pulley: er.pulley || null,
+          extraWeight: er.extraWeight || null,
           notes: er.notes || null,
           position: er.position,
         }),
@@ -240,6 +244,7 @@ export const sessionsRoutes = new Hono<ApiEnv>()
         completed: e.completed,
         bench: e.bench,
         pulley: e.pulley,
+        extraWeight: e.extraWeight,
         notes: e.notes,
         sets: sets
           .filter((s) => s.entryId === e.id)

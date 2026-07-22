@@ -2,13 +2,13 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import type { Db } from './db'
 import { user, session, account, verification } from './db/schema'
-import { sendVerificationEmail, sendResetPasswordEmail } from './email'
+import { sendVerificationEmail, sendResetPasswordEmail, type EmailBinding } from './email'
 
 export type AuthEnv = {
   BETTER_AUTH_SECRET: string
   BETTER_AUTH_URL: string
-  RESEND_API_KEY: string
-  RESEND_FROM: string
+  EMAIL?: EmailBinding
+  EMAIL_FROM: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
   MICROSOFT_CLIENT_ID: string

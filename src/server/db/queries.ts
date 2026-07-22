@@ -7,6 +7,7 @@ export type PrevEntry = {
   entryId: string
   bench: string | null
   pulley: string | null
+  extraWeight: string | null
   sets: SetInput[]
 }
 
@@ -18,7 +19,12 @@ export async function lastEntryFor(
   exerciseId: string,
 ): Promise<PrevEntry | null> {
   const rows = await db
-    .select({ id: sessionEntry.id, bench: sessionEntry.bench, pulley: sessionEntry.pulley })
+    .select({
+      id: sessionEntry.id,
+      bench: sessionEntry.bench,
+      pulley: sessionEntry.pulley,
+      extraWeight: sessionEntry.extraWeight,
+    })
     .from(sessionEntry)
     .innerJoin(workoutSession, eq(sessionEntry.sessionId, workoutSession.id))
     .where(and(eq(sessionEntry.exerciseId, exerciseId), eq(workoutSession.userId, userId)))
@@ -38,6 +44,7 @@ export async function lastEntryFor(
     entryId: found.id,
     bench: found.bench,
     pulley: found.pulley,
+    extraWeight: found.extraWeight,
     sets: sets.map((s) => ({ reps: s.reps, weight: s.weight })),
   }
 }

@@ -10,6 +10,6 @@ const db = createDb(cfEnv.DB)
 const days = await routineTree(db, user.id)
 ---
 
-<AppLayout brand="Rutina" subtitle="editar días y ejercicios" back="/app" title="Rutina — Bitácora">
+<AppLayout brand="Rutina" subtitle="editar días y ejercicios" back="/app" title="Rutina — Play Back Gym">
   <RoutineEditor initialDays={days} client:load />
 </AppLayout>

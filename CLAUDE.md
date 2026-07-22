@@ -1,8 +1,13 @@
-# Bitácora
+# Play Back Gym
 
 Registro personal de entrenamiento de gym: rutina por días, registro por serie, comparación
 automática contra la sesión anterior, cronómetro + timer de descanso, resumen para WhatsApp.
 Una idea de LUKAMON. Stack 100% Cloudflare, un solo Worker. Idioma de la UI: español (es-MX).
+
+**Dominios:** este repo es SOLO la app, desplegada en **`app.playbackgym.fitness`** (Worker
+`playbackgym`, custom domain en `wrangler.jsonc`). Entrar a `/` redirige al login; **no hay landing
+aquí** — la landing de marketing vive aparte en la raíz `playbackgym.fitness`. Marca e identidad en
+`BRAND.md`.
 
 ## Commands
 
@@ -20,13 +25,13 @@ Una idea de LUKAMON. Stack 100% Cloudflare, un solo Worker. Idioma de la UI: esp
 
 Astro 7 (SSR, adapter `@astrojs/cloudflare` v14 con `@cloudflare/vite-plugin`) + TypeScript strict +
 React 19 (islas) + Tailwind v4 (`@tailwindcss/vite`) + Hono 4 embebido (+Zod +RPC) +
-better-auth (email+password + **OAuth Google/GitHub**, Resend) + D1 + Drizzle + PWA (`@vite-pwa/astro`) +
+better-auth (email+password + **OAuth Google/Microsoft/GitHub**, Cloudflare Email Sending) + D1 + Drizzle + PWA (`@vite-pwa/astro`) +
 FontAwesome (self-hosted).
 
 ## Architecture
 
 - `src/server/` — TODO el backend, autocontenido (extraíble a Worker propio):
-  `db/` (schema Drizzle + queries), `auth.ts` (better-auth por-request), `email.ts` (Resend via fetch),
+  `db/` (schema Drizzle + queries), `auth.ts` (better-auth por-request), `email.ts` (binding `EMAIL`),
   `runtime.ts` (bindings CF), `api/` (app Hono: routes/ + logic/), `pages-data.ts` (lecturas SSR).
   `api/index.ts` exporta `AppType` para el cliente RPC (web y futura app móvil).
 - `src/pages/api/[...path].ts` — catch-all que delega TODO `/api/*` a Hono (`export const ALL`).
@@ -35,8 +40,10 @@ FontAwesome (self-hosted).
   `AuthForms`, `ProfileForm`.
 - Datos: Astro SSR carga props iniciales (`pages-data.ts`); las islas mutan vía cliente Hono RPC
   (`src/lib/api-client.ts` → `rpc`).
-- `api/logic/compare.ts` — factor de mejora (`setStats`: top + volumen). Funciones puras. Es el
-  corazón de la app: cualquier cambio requiere actualizar `tests/compare.test.ts`.
+- `api/logic/compare.ts` — factor de mejora (`setStats`: top + volumen; el volumen es solo criterio
+  interno de desempate, **nunca se muestra**). El texto visible (`rowText`) dice si mejoraste/bajaste/
+  igual y **en qué** (peso, repeticiones, series). Funciones puras. Es el corazón de la app: cualquier
+  cambio requiere actualizar `tests/compare.test.ts`.
 
 ## ⚠️ Puntos NO obvios (Astro v6+ / adapter v14)
 
@@ -72,13 +79,18 @@ Diseño **profesional, claro por defecto** (rediseñado; el usuario rechazó el 
   (cuerpo y datos con `tabular-nums`). **NO** Bebas Neue ni eyebrows mono (eran los "tells" de IA).
   Íconos: FontAwesome self-hosted (sin CDN).
 - App = columna única max-w 480px. Landing más ancha (max-w 1000px). Steppers reps ±1, peso ±2.5.
-- Feedback legible (sin jerga): "Peso máx" y "Total levantado" en vez de "top/vol".
-- Campos opcionales marcados con `(opcional)`. La marca `.brand` lleva una barra esmeralda antes del texto.
+- Feedback legible (sin jerga): dice "Mejoraste/Bajaste/Igual" y el detalle en **peso máx, reps y
+  series**. **NUNCA** "total levantado" (peso×reps es una multiplicación que confunde).
+- Campos opcionales marcados con `(opcional)`: banco, polea, **peso extra** (disco/banda/peso externo)
+  y notas. La nota de la rutina se precarga al entrenar (antes se perdía). La marca `.brand` lleva una
+  barra esmeralda antes del texto.
 
 ## Auth (importante)
 
-- Registro **solo** por email (con verificación) **o OAuth** (sin verificación): **Google, Microsoft, GitHub**.
-- **El teléfono NO es para registrarse** — es un campo de perfil opcional, solo para compartir por WhatsApp.
+- Registro por email (con verificación) **o OAuth** (sin verificación): **Google, Microsoft, GitHub**.
+- **El teléfono nunca es método de acceso** — es un campo **opcional** (se puede capturar al registrarse
+  o en el perfil), solo para recibir el resumen por WhatsApp. Con teléfono guardado, el feedback muestra
+  "Enviármelo por WhatsApp" (abre `wa.me` al propio número); sin él, "Copiar para WhatsApp".
 - Providers con id `dev-*` (placeholders) se ignoran solos; la app corre sin OAuth hasta poner credenciales reales.
 
 ## Entrenamiento
@@ -92,9 +104,11 @@ Diseño **profesional, claro por defecto** (rediseñado; el usuario rechazó el 
 | Var | Qué es | Dónde |
 |-----|--------|-------|
 | `BETTER_AUTH_SECRET` | firma de sesiones (secreto) | `.dev.vars` / `wrangler secret put` |
-| `BETTER_AUTH_URL` | URL base de la app | `.dev.vars` / `vars` en wrangler.jsonc |
-| `RESEND_API_KEY` / `RESEND_FROM` | envío de correos (secreto) | `.dev.vars` / `wrangler secret put` |
+| `BETTER_AUTH_URL` | URL base (`https://app.playbackgym.fitness`) | `.dev.vars` / `vars` en wrangler.jsonc |
+| binding `EMAIL` | Cloudflare Email Sending (`send_email`) | wrangler.jsonc — no secreto |
+| `EMAIL_FROM` | remitente (`no-reply@playbackgym.fitness`) | `.dev.vars` / `vars` en wrangler.jsonc |
 | `GOOGLE_CLIENT_ID/SECRET` | OAuth Google | `.dev.vars` / `wrangler secret put` |
+| `MICROSOFT_CLIENT_ID/SECRET` | OAuth Microsoft | `.dev.vars` / `wrangler secret put` |
 | `GITHUB_CLIENT_ID/SECRET` | OAuth GitHub | `.dev.vars` / `wrangler secret put` |
 | binding `DB` | D1 en wrangler.jsonc | no secreto |
 
@@ -103,10 +117,14 @@ Local: `.dev.vars` (gitignored). Prod: `wrangler secret put`.
 ## Reglas No Negociables
 
 1. TypeScript strict, cero `any`. Todo input externo pasa por Zod.
-2. Email solo vía fetch a Resend (nunca nodemailer/APIs de Node incompatibles con Workers).
+2. Email solo vía el binding `EMAIL` de **Cloudflare Email Sending** (`send_email` en wrangler.jsonc;
+   `env.EMAIL.send({to, from, subject, html, text})`). Nunca nodemailer/SMTP/APIs de Node. El dominio
+   debe estar onboarded (`wrangler email sending enable playbackgym.fitness`). En local, sin binding,
+   los correos se imprimen en consola.
 3. Nunca estado module-level mutable en el server. auth/db se instancian por request.
 4. `logic/compare.ts` no se toca sin actualizar sus tests. Mejora = top mayor, o top igual y volumen
-   mayor. Steppers: reps ±1, peso ±2.5.
+   mayor (el volumen es desempate interno; el texto visible habla de peso/reps/series, nunca "total
+   levantado"). Steppers: reps ±1, peso ±2.5.
 5. Snapshots en historial: sesiones pasadas son inmutables ante cambios de rutina.
 6. Migraciones D1 solo vía drizzle-kit + wrangler d1 migrations. Nunca editar la DB a mano.
 7. UI y correos en español (es-MX). Crédito "Una idea de LUKAMON" en landing, footer y WhatsApp.

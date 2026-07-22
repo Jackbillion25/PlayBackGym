@@ -10,6 +10,7 @@ type PrefillExercise = {
   unit: 'kg' | 'lb'
   bench: string
   pulley: string
+  extraWeight: string
   notes: string
   sets: PrefillSet[]
 }
@@ -22,6 +23,7 @@ type ExState = {
   unit: 'kg' | 'lb'
   bench: string
   pulley: string
+  extraWeight: string
   notes: string
   completed: boolean
   sets: SetV[]
@@ -51,6 +53,7 @@ function fromPrefill(pf: Prefill): ExState[] {
     unit: e.unit,
     bench: e.bench ?? '',
     pulley: e.pulley ?? '',
+    extraWeight: e.extraWeight ?? '',
     notes: e.notes ?? '',
     completed: false,
     sets: (e.sets.length ? e.sets : [{ reps: null, weight: null }]).map((s) => ({
@@ -155,6 +158,7 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
         completed: e.completed,
         bench: e.bench,
         pulley: e.pulley,
+        extraWeight: e.extraWeight,
         notes: e.notes,
         sets: e.sets.map((s) => ({ reps: toNum(s.reps), weight: toNum(s.weight) })),
       }))
@@ -276,8 +280,16 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
               </div>
             </div>
             <div className="field">
+              <label>Peso extra <span className="opcional">(opcional · disco, banda o peso externo)</span></label>
+              <input
+                value={e.extraWeight}
+                onChange={(ev) => update(ei, { extraWeight: ev.target.value })}
+                placeholder="Ej. disco de 5 kg, banda…"
+              />
+            </div>
+            <div className="field">
               <label>Notas <span className="opcional">(opcional)</span></label>
-              <textarea value={e.notes} onChange={(ev) => update(ei, { notes: ev.target.value })} />
+              <textarea value={e.notes} onChange={(ev) => update(ei, { notes: ev.target.value })} placeholder="Técnica, sensaciones, referencias…" />
             </div>
           </div>
         ))}

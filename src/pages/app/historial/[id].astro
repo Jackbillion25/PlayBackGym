@@ -37,10 +37,11 @@ if (!detail) return Astro.redirect('/app/historial')
             S{i + 1}: {s.reps ?? '—'} reps · {fmtWeight(s.weight)}
           </div>
         ))}
-        {(e.bench || e.pulley) && (
+        {(e.bench || e.pulley || e.extraWeight) && (
           <div class="ex-meta" style="margin-top:6px;">
             {e.bench && <span>Banco: {e.bench} </span>}
-            {e.pulley && <span>· Polea: {e.pulley}</span>}
+            {e.pulley && <span>· Polea: {e.pulley} </span>}
+            {e.extraWeight && <span>· Peso extra: {e.extraWeight}</span>}
           </div>
         )}
         {e.notes && <div class="ex-meta" style="margin-top:4px;font-style:italic;">{e.notes}</div>}

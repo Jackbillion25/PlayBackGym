@@ -1,34 +1,48 @@
-// Envío de correos vía la API REST de Resend (fetch — nunca nodemailer en Workers).
+// Envío de correos vía Cloudflare Email Sending (binding `EMAIL` del Worker).
+// Sin API keys: el binding envía desde un dominio onboarded en Email Sending.
+// (Antes usábamos Resend por fetch; ahora todo es 100% Cloudflare.)
 
-type SendArgs = {
-  apiKey: string
-  from: string
-  to: string
+// Forma mínima del binding send_email (Workers). Evita `any` (regla: 0 any).
+export type EmailAddress = string | { email: string; name?: string }
+export type EmailMessage = {
+  to: EmailAddress
+  from: EmailAddress
+  replyTo?: EmailAddress
   subject: string
   html: string
+  text: string
+}
+export type EmailBinding = {
+  send(message: EmailMessage): Promise<{ messageId: string }>
 }
 
-async function sendEmail({ apiKey, from, to, subject, html }: SendArgs): Promise<void> {
-  // En desarrollo, sin API key real, solo logueamos el link para no romper el flujo.
-  if (!apiKey || apiKey.startsWith('re_dev')) {
-    console.log(`\n[email:dev] To: ${to}\nSubject: ${subject}\n${html}\n`)
+export type EmailEnv = {
+  EMAIL?: EmailBinding
+  EMAIL_FROM: string // ej. "no-reply@playbackgym.fitness"
+}
+
+const FROM_NAME = 'Play Back Gym'
+
+async function sendEmail(
+  env: EmailEnv,
+  args: { to: string; subject: string; html: string; text: string },
+): Promise<void> {
+  // En dev (o si el binding no está disponible localmente) solo logueamos, así
+  // el flujo de verificación/reset no se rompe sin tener que enviar de verdad.
+  if (!env.EMAIL) {
+    console.log(`\n[email:dev] Para: ${args.to}\nAsunto: ${args.subject}\n${args.text}\n`)
     return
   }
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ from, to, subject, html }),
+  await env.EMAIL.send({
+    to: args.to,
+    from: { email: env.EMAIL_FROM, name: FROM_NAME },
+    subject: args.subject,
+    html: args.html,
+    text: args.text,
   })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Resend error ${res.status}: ${body}`)
-  }
 }
 
-// ---- Plantillas (tono de marca: dark, dorado) ------------------------------
+// ---- Plantillas (marca: claro, esmeralda) ----------------------------------
 
 const BRAND = '#0f7a52'
 const BG = '#f6f7f6'
@@ -42,7 +56,7 @@ function shell(title: string, bodyHtml: string, cta: { href: string; label: stri
     <tr><td style="padding:30px 28px;">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:22px;">
         <span style="display:inline-block;width:9px;height:22px;border-radius:3px;background:${BRAND};"></span>
-        <span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${TEXT};">Bitácora</span>
+        <span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;color:${TEXT};">Play Back Gym</span>
       </div>
       <h1 style="font-size:21px;font-weight:700;margin:0 0 12px;color:${TEXT};">${title}</h1>
       <p style="font-size:15px;line-height:1.6;color:${TEXT2};margin:0 0 26px;">${bodyHtml}</p>
@@ -55,40 +69,28 @@ function shell(title: string, bodyHtml: string, cta: { href: string; label: stri
 </body></html>`
 }
 
-type Env = { RESEND_API_KEY: string; RESEND_FROM: string }
-
 export async function sendVerificationEmail(
-  env: Env,
+  env: EmailEnv,
   args: { to: string; url: string; name?: string },
 ): Promise<void> {
-  const html = shell(
-    `Verifica tu correo`,
-    `Hola${args.name ? ` ${args.name}` : ''}, confirma tu correo para empezar a registrar tus entrenamientos en Bitácora.`,
-    { href: args.url, label: 'Verificar correo' },
-  )
-  await sendEmail({
-    apiKey: env.RESEND_API_KEY,
-    from: env.RESEND_FROM,
+  const intro = `Hola${args.name ? ` ${args.name}` : ''}, confirma tu correo para empezar a registrar tus entrenamientos en Play Back Gym.`
+  await sendEmail(env, {
     to: args.to,
-    subject: 'Verifica tu correo — Bitácora',
-    html,
+    subject: 'Verifica tu correo — Play Back Gym',
+    html: shell('Verifica tu correo', intro, { href: args.url, label: 'Verificar correo' }),
+    text: `${intro}\n\nVerifica tu correo aquí:\n${args.url}\n\nPlay Back Gym — una idea de LUKAMON`,
   })
 }
 
 export async function sendResetPasswordEmail(
-  env: Env,
+  env: EmailEnv,
   args: { to: string; url: string; name?: string },
 ): Promise<void> {
-  const html = shell(
-    `Restablece tu contraseña`,
-    `Recibimos una solicitud para restablecer tu contraseña. Si no fuiste tú, ignora este correo.`,
-    { href: args.url, label: 'Cambiar contraseña' },
-  )
-  await sendEmail({
-    apiKey: env.RESEND_API_KEY,
-    from: env.RESEND_FROM,
+  const intro = `Recibimos una solicitud para restablecer tu contraseña. Si no fuiste tú, ignora este correo.`
+  await sendEmail(env, {
     to: args.to,
-    subject: 'Restablece tu contraseña — Bitácora',
-    html,
+    subject: 'Restablece tu contraseña — Play Back Gym',
+    html: shell('Restablece tu contraseña', intro, { href: args.url, label: 'Cambiar contraseña' }),
+    text: `${intro}\n\nCambia tu contraseña aquí:\n${args.url}\n\nPlay Back Gym — una idea de LUKAMON`,
   })
 }

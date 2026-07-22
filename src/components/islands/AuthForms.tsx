@@ -69,7 +69,7 @@ export default function AuthForms({ mode, token }: { mode: Mode; token?: string 
   }
   const eyebrows: Record<Mode, string> = {
     login: 'Bienvenido de vuelta',
-    register: 'Empieza tu bitácora',
+    register: 'Únete a Play Back Gym',
     forgot: 'Recuperación',
     reset: 'Restablecer',
   }
@@ -156,8 +156,8 @@ export default function AuthForms({ mode, token }: { mode: Mode; token?: string 
             </a>
             <span style={{ color: 'var(--text2)' }}>
               ¿No tienes cuenta?{' '}
-              <a href="/registro" style={{ color: 'var(--accent)' }}>
-                Regístrate
+              <a href="/signup" style={{ color: 'var(--accent)' }}>
+                Crea una gratis
               </a>
             </span>
           </>

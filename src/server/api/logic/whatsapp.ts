@@ -23,7 +23,7 @@ function mark(status: CompareStatus): string {
 // Genera el resumen compartible por WhatsApp (con crédito LUKAMON al cierre).
 export function buildWhatsAppText(fb: Feedback): string {
   const lines: string[] = []
-  lines.push(`*Bitácora — ${fb.dayName}*`)
+  lines.push(`*Play Back Gym — ${fb.dayName}*`)
   lines.push(fmtDate(fb.finishedAt))
   lines.push('')
   for (const r of fb.rows) {
@@ -32,6 +32,6 @@ export function buildWhatsAppText(fb: Feedback): string {
   lines.push('')
   lines.push(`✅ ${fb.completedCount}/${fb.total} ejercicios completados`)
   lines.push('')
-  lines.push('_Bitácora — una idea de LUKAMON_')
+  lines.push('_Play Back Gym — una idea de LUKAMON_')
   return lines.join('\n')
 }

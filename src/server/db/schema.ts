@@ -95,6 +95,8 @@ export const exercise = sqliteTable(
       .default('kg'),
     bench: text('bench'),
     pulley: text('pulley'),
+    // Peso externo opcional (disco extra, banda, cadena… algo que no es la máquina)
+    extraWeight: text('extra_weight'),
     notes: text('notes'),
     position: integer('position').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
@@ -128,6 +130,8 @@ export const sessionEntry = sqliteTable(
     completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
     bench: text('bench'),
     pulley: text('pulley'),
+    // Snapshot del peso externo usado en esta serie del ejercicio (disco/banda/…)
+    extraWeight: text('extra_weight'),
     notes: text('notes'),
     position: integer('position').notNull().default(0),
   },

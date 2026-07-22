@@ -10,7 +10,7 @@ const db = createDb(cfEnv.DB)
 const items = await historyPage(db, user.id, 50)
 ---
 
-<AppLayout brand="Historial" subtitle="sesiones registradas" back="/app" title="Historial — Bitácora">
+<AppLayout brand="Historial" subtitle="sesiones registradas" back="/app" title="Historial — Play Back Gym">
   <div class="card">
     {
       items.length ? (

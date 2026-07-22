@@ -6,7 +6,7 @@ const STEPS: Step[] = [
   {
     selector: null,
     icon: 'fa-hand-sparkles',
-    title: '¡Bienvenido a Bitácora!',
+    title: '¡Bienvenido a Play Back Gym!',
     body: 'Registra cada serie, mide tus descansos y compara tu progreso. Te muestro lo básico en 3 pasos.',
   },
   {

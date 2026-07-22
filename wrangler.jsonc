@@ -1,26 +1,43 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "bitacora",
-  "compatibility_date": "2026-07-14",
-  "compatibility_flags": ["nodejs_compat"],
-  // main y assets los inyecta el adapter @astrojs/cloudflare vía @cloudflare/vite-plugin.
-  "observability": {
-    "enabled": true,
-    "logs": {
-      // No registrar cada request; solo lo que nosotros emitimos (console.error en fallos).
-      "invocation_logs": false,
-      "head_sampling_rate": 1
-    }
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "bitacora-db",
-      "database_id": "cf367322-3b07-4452-ac14-32d446c7e4c9",
-      "migrations_dir": "migrations"
-    }
-  ],
-  "vars": {
-    "BETTER_AUTH_URL": "http://localhost:4321"
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "playbackgym",
+	"compatibility_date": "2026-07-14",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// main y assets los inyecta el adapter @astrojs/cloudflare vía @cloudflare/vite-plugin.
+	// El subdominio app.* apunta a este Worker (la landing vive aparte en la raíz del dominio).
+	"routes": [
+		{
+			"pattern": "app.playbackgym.fitness",
+			"custom_domain": true
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"logs": {
+			// No registrar cada request; solo lo que nosotros emitimos (console.error en fallos).
+			"invocation_logs": false,
+			"head_sampling_rate": 1
+		}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "bitacora-db",
+			"database_id": "cf367322-3b07-4452-ac14-32d446c7e4c9",
+			"migrations_dir": "../../migrations"
+		}
+	],
+	// Cloudflare Email Sending: envía correos sin API keys desde el dominio onboarded.
+	"send_email": [
+		{
+			"name": "EMAIL",
+			"remote": true
+		}
+	],
+	"vars": {
+		"BETTER_AUTH_URL": "https://app.playbackgym.fitness",
+		"EMAIL_FROM": "no-reply@playbackgym.fitness"
+	}
 }

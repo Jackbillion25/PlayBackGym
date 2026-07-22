@@ -17,7 +17,7 @@ const [{ value: sessionCount } = { value: 0 }] = await db
   .where(eq(workoutSession.userId, user.id))
 ---
 
-<AppLayout brand="Bitácora" subtitle={user.name} title="Panel — Bitácora">
+<AppLayout brand="Play Back Gym" subtitle={user.name} title="Panel — Play Back Gym">
   <a slot="actions" href="/app/perfil" class="profile-chip">
     <span class="dot"></span>{user.name?.split(' ')[0] ?? 'Perfil'}
   </a>

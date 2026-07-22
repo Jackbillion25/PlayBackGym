@@ -11,6 +11,7 @@ export type PrefillExercise = {
   unit: 'kg' | 'lb'
   bench: string
   pulley: string
+  extraWeight: string
   notes: string
   sets: { reps: number | null; weight: number | null }[]
 }
@@ -77,7 +78,10 @@ export async function prefillForDay(db: Db, userId: string, dayId: string) {
       unit: ex.unit,
       bench: prev?.bench ?? ex.bench ?? '',
       pulley: prev?.pulley ?? ex.pulley ?? '',
-      notes: '',
+      extraWeight: prev?.extraWeight ?? ex.extraWeight ?? '',
+      // La nota de la rutina (técnica/referencia) se muestra al entrenar; antes
+      // se perdía (quedaba vacía) y por eso "las notas no eran visibles".
+      notes: ex.notes ?? '',
       sets,
     })
   }
@@ -144,6 +148,7 @@ export async function sessionDetail(db: Db, userId: string, id: string) {
       completed: e.completed,
       bench: e.bench,
       pulley: e.pulley,
+      extraWeight: e.extraWeight,
       notes: e.notes,
       sets: sets.filter((s) => s.entryId === e.id).map((s) => ({ reps: s.reps, weight: s.weight })),
     })),
