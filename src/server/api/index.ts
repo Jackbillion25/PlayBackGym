@@ -5,6 +5,8 @@ import { daysRoutes } from './routes/days'
 import { exercisesRoutes } from './routes/exercises'
 import { sessionsRoutes } from './routes/sessions'
 import { profileRoutes } from './routes/profile'
+import { billingRoutes } from './routes/billing'
+import { webhooksRoutes } from './routes/webhooks'
 
 const app = new Hono<ApiEnv>().basePath('/api')
 
@@ -14,6 +16,9 @@ app.use('*', withContext)
 // better-auth: registro, login, logout, verify-email, reset, OAuth (Google/GitHub)
 app.on(['GET', 'POST'], '/auth/*', (c) => c.var.auth.handler(c.req.raw))
 
+// Stripe no manda sesión de better-auth: fetch() aislado, sin requireAuth.
+app.post('/webhooks/stripe', (c) => webhooksRoutes.fetch(c.req.raw, c.env))
+
 // Rutas de dominio protegidas
 const protectedApp = new Hono<ApiEnv>()
   .use('*', requireAuth)
@@ -21,6 +26,7 @@ const protectedApp = new Hono<ApiEnv>()
   .route('/', exercisesRoutes)
   .route('/', sessionsRoutes)
   .route('/', profileRoutes)
+  .route('/', billingRoutes)
 
 const routes = app.route('/', protectedApp)
 

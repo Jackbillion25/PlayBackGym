@@ -16,6 +16,9 @@ export type CfEnv = {
   MICROSOFT_CLIENT_SECRET: string
   GITHUB_CLIENT_ID: string
   GITHUB_CLIENT_SECRET: string
+  STRIPE_SECRET_KEY: string
+  STRIPE_WEBHOOK_SECRET: string
+  STRIPE_PUBLISHABLE_KEY: string
 }
 
 export const cfEnv = env as unknown as CfEnv

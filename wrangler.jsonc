@@ -26,7 +26,7 @@
 			"binding": "DB",
 			"database_name": "bitacora-db",
 			"database_id": "cf367322-3b07-4452-ac14-32d446c7e4c9",
-			"migrations_dir": "../../migrations"
+			"migrations_dir": "migrations"
 		}
 	],
 	// Cloudflare Email Sending: envía correos sin API keys desde el dominio onboarded.
@@ -38,6 +38,8 @@
 	],
 	"vars": {
 		"BETTER_AUTH_URL": "https://app.playbackgym.fitness",
-		"EMAIL_FROM": "no-reply@playbackgym.fitness"
+		"EMAIL_FROM": "no-reply@playbackgym.fitness",
+		// No es secreta; no se usa hasta que exista frontend de compra (ver STRIPE_PLAN.md).
+		"STRIPE_PUBLISHABLE_KEY": "pk_test_51Tw4Gn6eDhp9J6Du85PsQRpGWiG3G6GUJMJ5AkmD4ot3jQjVHEACcM6IAYhmaMhJKTxUVbURniBTKG7d7KLYghRy00O1SeAqW8"
 	}
 }

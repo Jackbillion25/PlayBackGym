@@ -15,6 +15,13 @@
       "when": 1784675369067,
       "tag": "0001_sparkling_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784743775479,
+      "tag": "0002_equal_colossus",
+      "breakpoints": true
     }
   ]
 }
