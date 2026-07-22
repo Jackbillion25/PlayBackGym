@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { expo } from '@better-auth/expo'
 import type { Db } from './db'
 import { user, session, account, verification } from './db/schema'
 import { sendVerificationEmail, sendResetPasswordEmail, type EmailBinding } from './email'
@@ -16,6 +17,16 @@ export type AuthEnv = {
   GITHUB_CLIENT_ID: string
   GITHUB_CLIENT_SECRET: string
 }
+
+// Esquemas de la app móvil (Expo) — deben coincidir con SCHEMES en
+// PlayBackGym-react-native/env.ts. Cada uno habilita que el flujo de OAuth
+// (redirect de vuelta a la app tras login social) sea reconocido como origen
+// confiable por el plugin `expo()` de better-auth.
+const EXPO_TRUSTED_ORIGINS = [
+  'playbackgym://', // production
+  'playbackgym.preview://', // preview
+  'playbackgym.dev://', // development
+]
 
 // La instancia se crea POR REQUEST — en Workers no hay estado global confiable.
 export function createAuth(db: Db, env: AuthEnv) {
@@ -42,7 +53,7 @@ export function createAuth(db: Db, env: AuthEnv) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [env.BETTER_AUTH_URL],
+    trustedOrigins: [env.BETTER_AUTH_URL, ...EXPO_TRUSTED_ORIGINS],
     database: drizzleAdapter(db, {
       provider: 'sqlite',
       schema: { user, session, account, verification },
@@ -77,6 +88,7 @@ export function createAuth(db: Db, env: AuthEnv) {
     session: {
       cookieCache: { enabled: true, maxAge: 5 * 60 },
     },
+    plugins: [expo()],
   })
 }
 
