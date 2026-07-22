@@ -14,8 +14,8 @@ const items = await historyPage(db, user.id, 50)
   <div class="card">
     {
       items.length ? (
-        items.map((h) => (
-          <a class="history-item" href={`/app/historial/${h.id}`} style="cursor:pointer;">
+        items.map((h, i) => (
+          <a class="history-item anim-in" style={`animation-delay:${Math.min(i, 10) * 25}ms`} href={`/app/historial/${h.id}`}>
             <div>
               <div class="h-day">{h.dayName}</div>
               <div class="h-stat">{h.completedCount}/{h.total} completados</div>

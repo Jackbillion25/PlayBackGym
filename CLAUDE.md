@@ -78,7 +78,8 @@ Diseño **profesional, claro por defecto** (rediseñado; el usuario rechazó el 
 - Fuentes self-hosted (`@fontsource`): **Plus Jakarta Sans** (variable, títulos/marca) + **Inter**
   (cuerpo y datos con `tabular-nums`). **NO** Bebas Neue ni eyebrows mono (eran los "tells" de IA).
   Íconos: FontAwesome self-hosted (sin CDN).
-- App = columna única max-w 480px. Landing más ancha (max-w 1000px). Steppers reps ±1, peso ±2.5.
+- App = columna única max-w 480px. Landing más ancha (max-w 1000px). Steppers reps ±1; peso con dos
+  botones por lado (chico ±0.5, grande ±1) — sin etiquetas, el tamaño del botón comunica el paso.
 - Feedback legible (sin jerga): dice "Mejoraste/Bajaste/Igual" y el detalle en **peso máx, reps y
   series**. **NUNCA** "total levantado" (peso×reps es una multiplicación que confunde).
 - Campos opcionales marcados con `(opcional)`: banco, polea, **peso extra** (disco/banda/peso externo)
@@ -123,8 +124,9 @@ Local: `.dev.vars` (gitignored). Prod: `wrangler secret put`.
    los correos se imprimen en consola.
 3. Nunca estado module-level mutable en el server. auth/db se instancian por request.
 4. `logic/compare.ts` no se toca sin actualizar sus tests. Mejora = top mayor, o top igual y volumen
-   mayor (el volumen es desempate interno; el texto visible habla de peso/reps/series, nunca "total
-   levantado"). Steppers: reps ±1, peso ±2.5.
+   mayor (el volumen es desempate interno; el texto visible es el detalle COMPLETO serie por serie —
+   "Serie 1: de 10 reps 50 kg a 8 reps 60 kg" —, nunca comprimido ni "total levantado"). Steppers:
+   reps ±1; peso con botón chico (±0.5) y grande (±1) por lado.
 5. Snapshots en historial: sesiones pasadas son inmutables ante cambios de rutina.
 6. Migraciones D1 solo vía drizzle-kit + wrangler d1 migrations. Nunca editar la DB a mano.
 7. UI y correos en español (es-MX). Crédito "Una idea de LUKAMON" en landing, footer y WhatsApp.

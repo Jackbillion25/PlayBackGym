@@ -17,25 +17,28 @@ const hasExercises = prefill.exercises.length > 0
 
 <Base title={`${prefill.day.name} — Entrenamiento`}>
   <div class="app-shell">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px 0;">
-      <a href="/app" class="icon-btn" aria-label="Volver" style="color:var(--text2);">
-        <i class="fa-solid fa-arrow-left"></i>
-      </a>
-      <ThemeToggle />
-    </div>
-
     {
       hasExercises ? (
+        // La cabina sticky (TrainCockpit, dentro de TrainingSession) trae su
+        // propio botón de volver — no duplicamos chrome aquí.
         <TrainingSession prefill={prefill} userPhone={(user as { phone?: string | null }).phone ?? null} client:load />
       ) : (
-        <main class="app-main" style="padding-top:16px;">
-          <div class="card">
-            <div class="eyebrow">{prefill.day.name}</div>
-            <h1 class="step-title">Este día no tiene ejercicios</h1>
-            <p class="hint">Agrega ejercicios en tu rutina para poder entrenar este día.</p>
-            <a href="/app/rutina" class="btn btn-primary">Editar rutina</a>
+        <>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px 0;">
+            <a href="/app" class="icon-btn" aria-label="Volver" style="color:var(--text2);">
+              <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <ThemeToggle />
           </div>
-        </main>
+          <main class="app-main" style="padding-top:16px;">
+            <div class="card">
+              <div class="eyebrow">{prefill.day.name}</div>
+              <h1 class="step-title">Este día no tiene ejercicios</h1>
+              <p class="hint">Agrega ejercicios en tu rutina para poder entrenar este día.</p>
+              <a href="/app/rutina" class="btn btn-primary">Editar rutina</a>
+            </div>
+          </main>
+        </>
       )
     }
   </div>

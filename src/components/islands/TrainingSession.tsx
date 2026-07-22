@@ -30,7 +30,8 @@ type ExState = {
 }
 
 const REPS_STEP = 1
-const WEIGHT_STEP = 2.5
+const WEIGHT_STEP_SMALL = 0.5
+const WEIGHT_STEP_BIG = 1
 const REST_PRESETS = [60, 90, 120, 180]
 
 function draftKey(dayId: string) {
@@ -199,10 +200,8 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
 
   return (
     <>
-      <TrainHeader dayName={prefill.day.name} completed={completedCount} total={exs.length} startedAt={startedAt} />
+      <TrainCockpit dayName={prefill.day.name} completed={completedCount} total={exs.length} startedAt={startedAt} dayId={dayId} />
       <main className="app-main" style={{ paddingTop: 8 }}>
-        <RestTimer dayId={dayId} />
-
         <div className="card" style={{ padding: '12px 14px' }}>
           <p className="hint" style={{ margin: 0 }}>
             Registra <strong>cada serie por separado</strong>. Si cambias el peso a mitad de rutina, toca
@@ -211,17 +210,22 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
         </div>
 
         {exs.map((e, ei) => (
-          <div className={`ex-train-card ${e.completed ? 'done' : ''}`} key={e.exerciseId}>
-            <div className="ex-train-head">
-              <button
-                className={`checkbox ${e.completed ? 'checked' : ''}`}
-                onClick={() => update(ei, { completed: !e.completed })}
-                aria-label="Marcar completado"
-              >
+          <div
+            className={`ex-train-card ${e.completed ? 'done' : ''} anim-in`}
+            style={{ animationDelay: `${Math.min(ei, 8) * 40}ms` }}
+            key={e.exerciseId}
+          >
+            <button
+              type="button"
+              className="ex-train-head"
+              onClick={() => update(ei, { completed: !e.completed })}
+              aria-pressed={e.completed}
+            >
+              <span className={`checkbox ${e.completed ? 'checked' : ''}`} aria-hidden="true">
                 {e.completed && <i className="fa-solid fa-check"></i>}
-              </button>
-              <div className="ex-train-title">{e.name}</div>
-            </div>
+              </span>
+              <span className="ex-train-title">{e.name}</span>
+            </button>
 
             {e.sets.map((s, si) => (
               <div className="set-row" key={si}>
@@ -242,8 +246,21 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
                 </div>
                 <div className="set-field">
                   <span className="set-field-label">Peso ({e.unit})</span>
-                  <div className="stepper">
-                    <button onClick={() => step(ei, si, 'weight', -WEIGHT_STEP)} aria-label="menos peso">−</button>
+                  <div className="stepper stepper-weight">
+                    <button
+                      className="step-lg"
+                      onClick={() => step(ei, si, 'weight', -WEIGHT_STEP_BIG)}
+                      aria-label="menos 1"
+                    >
+                      −
+                    </button>
+                    <button
+                      className="step-sm"
+                      onClick={() => step(ei, si, 'weight', -WEIGHT_STEP_SMALL)}
+                      aria-label="menos 0.5"
+                    >
+                      −
+                    </button>
                     <input
                       type="number"
                       inputMode="decimal"
@@ -252,7 +269,20 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
                       onChange={(ev) => updateSet(ei, si, { weight: ev.target.value })}
                       placeholder="peso"
                     />
-                    <button onClick={() => step(ei, si, 'weight', WEIGHT_STEP)} aria-label="más peso">+</button>
+                    <button
+                      className="step-sm"
+                      onClick={() => step(ei, si, 'weight', WEIGHT_STEP_SMALL)}
+                      aria-label="más 0.5"
+                    >
+                      +
+                    </button>
+                    <button
+                      className="step-lg"
+                      onClick={() => step(ei, si, 'weight', WEIGHT_STEP_BIG)}
+                      aria-label="más 1"
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
                 {si > 0 ? (
@@ -305,36 +335,59 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
   )
 }
 
-// ---- Cronómetro sticky (tiempo total de sesión, basado en timestamp) --------
-function TrainHeader({
+// ---- Cabina sticky: volver + cronómetro + progreso + timer de descanso -----
+// Una sola región sticky (en vez de piezas sueltas con offsets fijos) para que
+// el respiro contra el borde superior sea real y no se rompa si cambia el alto.
+function TrainCockpit({
   dayName,
   completed,
   total,
   startedAt,
+  dayId,
 }: {
   dayName: string
   completed: number
   total: number
   startedAt: number
+  dayId: string
 }) {
   // Se recalcula desde el timestamp de inicio: sobrevive recargas sin reiniciarse.
   const [seconds, setSeconds] = useState(() => Math.max(0, Math.floor((Date.now() - startedAt) / 1000)))
+  const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
     const tick = () => setSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [startedAt])
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0
   return (
-    <div className="train-header">
-      <div className="brand">
-        {dayName}
-        <small>{completed}/{total} completados</small>
+    <div className={`train-sticky ${scrolled ? 'scrolled' : ''}`}>
+      <div className="train-header">
+        <div className="train-header-left">
+          <a href="/app" className="icon-btn" aria-label="Salir del entreno (tu borrador se guarda)" style={{ color: 'var(--text2)' }}>
+            <i className="fa-solid fa-arrow-left"></i>
+          </a>
+          <div className="brand">
+            {dayName}
+            <small>{completed}/{total} completados</small>
+          </div>
+        </div>
+        <div className="clock" title="Tiempo de sesión">
+          <span className="clock-time">{fmtClock(seconds)}</span>
+          <span className="clock-label"><i className="fa-solid fa-stopwatch"></i> sesión</span>
+        </div>
       </div>
-      <div className="clock" title="Tiempo de sesión">
-        <span className="clock-time">{fmtClock(seconds)}</span>
-        <span className="clock-label"><i className="fa-solid fa-stopwatch"></i> sesión</span>
+      <div className="train-progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="train-progress-fill" style={{ width: `${pct}%` }}></div>
       </div>
+      <RestTimer dayId={dayId} />
     </div>
   )
 }
@@ -440,17 +493,27 @@ function RestTimer({ dayId }: { dayId: string }) {
             {p >= 60 ? `${p / 60}min` : `${p}s`}
           </button>
         ))}
-        <input
-          type="number"
-          value={custom}
-          onChange={(e) => setCustom(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && Number(custom) > 0) start(Number(custom))
-          }}
-          placeholder="seg"
-          style={{ width: 56, padding: '6px 8px', fontSize: 12 }}
-          aria-label="Descanso personalizado en segundos"
-        />
+        <div className="rest-custom">
+          <input
+            type="number"
+            inputMode="numeric"
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && Number(custom) > 0) start(Number(custom))
+            }}
+            placeholder="seg"
+            aria-label="Descanso personalizado en segundos"
+          />
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Iniciar descanso personalizado"
+            onClick={() => Number(custom) > 0 && start(Number(custom))}
+          >
+            <i className="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
       </div>
       <button className="rest-btn" onClick={toggle} aria-label={running ? 'Pausar descanso' : 'Iniciar descanso'} title="Iniciar/pausar descanso">
         <i className={`fa-solid ${running ? 'fa-pause' : 'fa-play'}`}></i>

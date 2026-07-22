@@ -48,6 +48,41 @@ export async function routineTree(db: Db, userId: string) {
   }))
 }
 
+// Un solo día + sus ejercicios (config de rutina, no el prefill de entreno) —
+// para la pantalla dedicada de edición /app/rutina/[dayId].
+export async function routineDayDetail(db: Db, userId: string, dayId: string) {
+  const dayRow = await db
+    .select()
+    .from(routineDay)
+    .where(and(eq(routineDay.id, dayId), eq(routineDay.userId, userId)))
+    .limit(1)
+  if (!dayRow.length) return null
+
+  const exercises = await db
+    .select()
+    .from(exercise)
+    .where(eq(exercise.dayId, dayId))
+    .orderBy(asc(exercise.position), asc(exercise.createdAt))
+
+  return {
+    id: dayRow[0].id,
+    name: dayRow[0].name,
+    position: dayRow[0].position,
+    exercises: exercises.map((e) => ({
+      id: e.id,
+      name: e.name,
+      targetSets: e.targetSets,
+      targetReps: e.targetReps,
+      targetWeight: e.targetWeight,
+      unit: e.unit,
+      bench: e.bench,
+      pulley: e.pulley,
+      notes: e.notes,
+      position: e.position,
+    })),
+  }
+}
+
 export async function prefillForDay(db: Db, userId: string, dayId: string) {
   const dayRow = await db
     .select()

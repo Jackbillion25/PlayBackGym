@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { rowText, type CompareRow } from '../../server/api/logic/compare'
+import { verdictText, n, type CompareRow, type SetLine } from '../../server/api/logic/compare'
 import { fmtDate } from '../../lib/format'
 
 export type FeedbackData = {
@@ -9,6 +9,43 @@ export type FeedbackData = {
   completedCount: number
   total: number
   whatsappText: string
+}
+
+function SetLineView({ line }: { line: SetLine }) {
+  if (line.prevReps === null) {
+    return (
+      <div className="set-line">
+        <span className="set-label">Serie {line.index + 1}</span>
+        <span className="set-values">
+          {line.curReps} reps · {n(line.curWeight!)} kg
+        </span>
+      </div>
+    )
+  }
+  if (line.curReps === null) {
+    return (
+      <div className="set-line">
+        <span className="set-label">Serie {line.index + 1}</span>
+        <span className="set-values set-field-removed">
+          ya no la registraste (antes {line.prevReps} reps · {n(line.prevWeight!)} kg)
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div className="set-line">
+      <span className="set-label">Serie {line.index + 1}</span>
+      <span className="set-values">
+        <span className={`set-field ${line.repsStatus}`}>
+          {line.prevReps}→{line.curReps} reps
+        </span>
+        {' · '}
+        <span className={`set-field ${line.weightStatus}`}>
+          {n(line.prevWeight!)}→{n(line.curWeight!)} kg
+        </span>
+      </span>
+    </div>
+  )
 }
 
 export default function SessionFeedback({ data, phone }: { data: FeedbackData; phone?: string | null }) {
@@ -38,18 +75,29 @@ export default function SessionFeedback({ data, phone }: { data: FeedbackData; p
 
   return (
     <>
-      <div className="card" style={{ marginBottom: 8, textAlign: 'center' }}>
+      <div className="card anim-in" style={{ marginBottom: 8, textAlign: 'center' }}>
         <div className="tutorial-icon"><i className="fa-solid fa-circle-check" style={{ color: 'var(--good)' }}></i></div>
         <div className="eyebrow">{data.dayName} · {fmtDate(data.finishedAt)}</div>
         <h1 className="step-title">¡Sesión registrada!</h1>
       </div>
 
-      <div className="card ticket">
+      <div className="card ticket anim-in" style={{ animationDelay: '60ms' }}>
         <div className="eyebrow">Comparado con tu sesión anterior</div>
         {data.rows.map((r, i) => (
-          <div className="compare-row" key={i}>
-            <div className="compare-name">{r.name}</div>
-            <div className={`compare-status ${r.status}`}>{rowText(r)}</div>
+          <div className="compare-block anim-in" style={{ animationDelay: `${100 + Math.min(i, 8) * 40}ms` }} key={i}>
+            <div className="compare-block-header">
+              <span className="compare-name">{r.name}</span>
+              <span className={`compare-badge ${r.status}`}>{verdictText(r.status)}</span>
+            </div>
+            {r.status !== 'skip' && (
+              <div className="set-lines">
+                {r.sets.length ? (
+                  r.sets.map((line) => <SetLineView line={line} key={line.index} />)
+                ) : (
+                  <div className="set-line set-line-empty">Sin series registradas</div>
+                )}
+              </div>
+            )}
           </div>
         ))}
         <div style={{ marginTop: 14, fontSize: 13, color: 'var(--text2)' }}>
@@ -57,7 +105,7 @@ export default function SessionFeedback({ data, phone }: { data: FeedbackData; p
         </div>
       </div>
 
-      <div className="card">
+      <div className="card anim-in" style={{ animationDelay: '160ms' }}>
         <div className="eyebrow">Compartir</div>
         {hasPhone ? (
           <button className="btn btn-primary" onClick={sendWhatsApp}>

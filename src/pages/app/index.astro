@@ -26,8 +26,8 @@ const [{ value: sessionCount } = { value: 0 }] = await db
     <div class="eyebrow">Entrenar</div>
     {
       days.length ? (
-        days.map((d) => (
-          <a class="section-link" href={`/app/entrenar/${d.id}`}>
+        days.map((d, i) => (
+          <a class="section-link anim-in" style={`animation-delay:${i * 30}ms`} href={`/app/entrenar/${d.id}`}>
             <div>
               <div class="t">{d.name}</div>
               <div class="s">{d.exercises.length} ejercicio(s)</div>

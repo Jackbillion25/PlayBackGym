@@ -1,0 +1,18 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro'
+import { createDb } from '../../../server/db'
+import { cfEnv } from '../../../server/runtime'
+import { routineDayDetail } from '../../../server/pages-data'
+import RoutineDayEditor from '../../../components/islands/RoutineDayEditor.tsx'
+
+const { dayId } = Astro.params
+const user = Astro.locals.user!
+const db = createDb(cfEnv.DB)
+const day = await routineDayDetail(db, user.id, dayId!)
+
+if (!day) return Astro.redirect('/app/rutina')
+---
+
+<AppLayout brand={day.name} subtitle="editar ejercicios" back="/app/rutina" title={`${day.name} — Rutina`}>
+  <RoutineDayEditor initialDay={day} client:load />
+</AppLayout>

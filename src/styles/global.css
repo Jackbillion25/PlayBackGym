@@ -439,11 +439,14 @@ main.app-main {
   justify-content: center;
   color: var(--text3);
   flex: 0 0 auto;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s, transform 0.08s ease;
 }
 .icon-btn:hover {
   color: var(--text);
   background: var(--surface2);
+}
+.icon-btn:active {
+  transform: scale(0.9);
 }
 .icon-btn.danger:hover {
   color: var(--bad);
@@ -568,20 +571,103 @@ main.app-main {
   text-align: center;
   padding: 22px 0;
 }
+/* Título de día editable in-place: se ve como encabezado, no como <input> genérico,
+   pero conserva un guion de subrayado punteado + lápiz para dejar claro que es editable. */
+.day-title-input {
+  display: block;
+  width: 100%;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px dashed var(--border2);
+  border-radius: 0;
+  padding: 2px 22px 6px 0;
+  transition: border-color 0.15s;
+}
+.day-title-input:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+.day-title-wrap {
+  position: relative;
+}
+.day-title-wrap .pen-hint {
+  position: absolute;
+  right: 2px;
+  top: 6px;
+  color: var(--text3);
+  font-size: 12px;
+  pointer-events: none;
+}
+/* Fila de ejercicio como <button>: mismo look que .exercise-row pero interactivo
+   (abre el formulario de edición). */
+.exercise-row-tap {
+  display: block;
+  width: 100%;
+  text-align: left;
+  transition: border-color 0.15s, transform 0.08s ease, background 0.12s;
+}
+.exercise-row-tap:hover {
+  border-color: var(--border2);
+  background: var(--surface3);
+}
+.exercise-row-tap:active {
+  transform: scale(0.99);
+}
 
 /* ============================================================ TRAINING */
-.train-header {
+/* Región sticky única (header + progreso + descanso): evita offsets mágicos
+   entre piezas sticky separadas y da respiro real contra el borde superior. */
+.train-sticky {
   position: sticky;
   top: 0;
   z-index: 30;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) 16px 14px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0);
+  transition: box-shadow 0.25s ease;
+}
+.train-sticky.scrolled {
+  box-shadow: var(--shadow-md);
+}
+.train-header {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(12px);
-  border-bottom: 1px solid var(--border);
+}
+.train-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.train-header-left .icon-btn {
+  flex: 0 0 auto;
+}
+.train-header .brand {
+  min-width: 0;
+}
+.train-progress {
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--surface3);
+  overflow: hidden;
+}
+.train-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--r-pill);
+  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .ex-train-card {
   background: var(--surface);
@@ -601,6 +687,18 @@ main.app-main {
   align-items: center;
   gap: 11px;
   margin-bottom: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 4px 2px;
+  margin-left: -2px;
+  border-radius: var(--r-sm);
+  transition: background 0.12s, transform 0.08s ease;
+}
+.ex-train-head:hover {
+  background: var(--surface2);
+}
+.ex-train-head:active {
+  transform: scale(0.99);
 }
 .checkbox {
   width: 26px;
@@ -618,6 +716,9 @@ main.app-main {
 .checkbox.checked {
   background: var(--accent);
   border-color: var(--accent);
+}
+.checkbox.checked i {
+  animation: check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .ex-train-title {
   font-weight: 700;
@@ -672,10 +773,13 @@ main.app-main {
   font-size: 20px;
   flex: 0 0 auto;
   line-height: 1;
-  transition: background 0.12s;
+  transition: background 0.12s, transform 0.08s ease;
 }
 .stepper button:hover {
   background: var(--accent-soft);
+}
+.stepper button:active {
+  transform: scale(0.9);
 }
 .stepper input {
   border: none;
@@ -688,6 +792,19 @@ main.app-main {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   box-shadow: none !important;
+}
+/* Peso: dos tamaños de botón por lado — el grande suma/resta 1, el chico 0.5.
+   Sin etiquetas: el tamaño del botón comunica la magnitud del paso. */
+.stepper-weight .step-sm {
+  width: 24px;
+  height: 30px;
+  font-size: 14px;
+  color: var(--text2);
+  align-self: center;
+  border-radius: var(--r-sm);
+}
+.stepper-weight .step-lg {
+  width: 34px;
 }
 .set-spacer {
   width: 34px;
@@ -722,9 +839,6 @@ main.app-main {
 
 /* ---------- Descanso ---------- */
 .rest-bar {
-  position: sticky;
-  top: 62px;
-  z-index: 25;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -775,6 +889,23 @@ main.app-main {
   color: var(--accent);
   background: var(--accent-soft);
 }
+.rest-preset:active {
+  transform: scale(0.92);
+}
+.rest-custom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.rest-custom input {
+  width: 52px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.rest-custom .icon-btn {
+  width: 30px;
+  height: 30px;
+}
 .rest-btn {
   width: 42px;
   height: 42px;
@@ -786,10 +917,80 @@ main.app-main {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.08s ease;
 }
 .rest-btn:hover {
   background: var(--accent-hover);
+}
+.rest-btn:active {
+  transform: scale(0.9);
+}
+
+/* ============================================================ MOTION
+   Sistema de entrada discreto: listas y tarjetas aparecen con una micro-
+   animación al montar (fade + slight rise), en cascada cuando hay varias.
+   Nada de esto anima en cada re-render — solo al aparecer en el DOM. */
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.anim-in {
+  animation: fade-slide-up 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fade-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.anim-expand {
+  animation: fade-slide-down 0.22s ease both;
+  transform-origin: top;
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(0.5);
+  }
+  65% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes header-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.train-sticky {
+  animation: header-drop 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-in,
+  .anim-expand,
+  .checkbox.checked i,
+  .train-sticky {
+    animation: none !important;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ============================================================ THEME TOGGLE */
@@ -819,50 +1020,89 @@ main.app-main {
   padding: 6px 18px 16px;
   box-shadow: var(--shadow-sm);
 }
-.compare-row {
+.compare-block {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.compare-block:last-child {
+  border-bottom: none;
+}
+.compare-block-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--border);
   gap: 12px;
-}
-.compare-row:last-child {
-  border-bottom: none;
+  margin-bottom: 8px;
 }
 .compare-name {
   font-weight: 600;
   font-size: 15px;
-  flex: 1;
 }
-.compare-status {
-  font-size: 13px;
-  font-weight: 500;
-  text-align: right;
+.compare-badge {
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.5;
-  font-variant-numeric: tabular-nums;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  white-space: nowrap;
+  padding: 3px 10px;
   border-radius: var(--r-pill);
 }
-.compare-status.up {
+.compare-badge.up {
   color: var(--good);
   background: var(--good-soft);
 }
-.compare-status.down {
+.compare-badge.down {
   color: var(--bad);
   background: var(--bad-soft);
 }
-.compare-status.same,
-.compare-status.first {
+.compare-badge.same,
+.compare-badge.first {
   color: var(--text2);
   background: var(--surface2);
 }
-.compare-status.skip {
+.compare-badge.skip {
   color: var(--text3);
   background: var(--surface2);
+}
+.set-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.set-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.set-line-empty {
+  color: var(--text3);
+  font-variant-numeric: initial;
+}
+.set-label {
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.set-values {
+  text-align: right;
+  color: var(--text);
+}
+.set-field.up {
+  color: var(--good);
+  font-weight: 600;
+}
+.set-field.down {
+  color: var(--bad);
+  font-weight: 600;
+}
+.set-field.same,
+.set-field.new {
+  color: var(--text);
+}
+.set-field-removed {
+  color: var(--text3);
+  font-style: italic;
 }
 
 /* ============================================================ HISTORY */
@@ -1187,4 +1427,16 @@ main.app-main {
 .cta-wide {
   max-width: 340px;
   margin: 0 auto;
+}
+
+/* Para Chrome, Safari, Edge y Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Para Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
 }
