@@ -1,3 +1,5 @@
+packages:
+  - '.'
 verifyDepsBeforeRun: false
 onlyBuiltDependencies:
   - esbuild
