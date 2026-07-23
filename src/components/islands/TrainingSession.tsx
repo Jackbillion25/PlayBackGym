@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { rpc } from '../../lib/api-client'
-import { fmtClock } from '../../lib/format'
+import { fmtClock, fmtDuration } from '../../lib/format'
 import SessionFeedback, { type FeedbackData } from './SessionFeedback'
 
 type PrefillSet = { reps: number | null; weight: number | null }
@@ -14,7 +15,7 @@ type PrefillExercise = {
   notes: string
   sets: PrefillSet[]
 }
-type Prefill = { day: { id: string; name: string }; exercises: PrefillExercise[] }
+type Prefill = { day: { id: string; name: string; lastDurationSeconds: number | null }; exercises: PrefillExercise[] }
 
 type SetV = { reps: string; weight: string }
 type ExState = {
@@ -33,6 +34,11 @@ const REPS_STEP = 1
 const WEIGHT_STEP_SMALL = 0.5
 const WEIGHT_STEP_BIG = 1
 const REST_PRESETS = [60, 90, 120, 180]
+const REST_CUSTOM_MAX = 3
+// Uso + presets de descanso (de fábrica y creados a mano) — globales, no por
+// día: si armaste "1:30" entrenando piernas, lo quieres disponible en pecho.
+// Se guardan juntos porque el orden en pantalla depende del uso de todos.
+const REST_PRESETS_KEY = 'bitacora_rest_presets'
 
 function draftKey(dayId: string) {
   return `bitacora_draft_${dayId}`
@@ -45,6 +51,12 @@ function startedKey(dayId: string) {
 // Timestamp (ms) en que termina el descanso en curso — persiste para reanudar.
 function restKey(dayId: string) {
   return `bitacora_rest_${dayId}`
+}
+
+// "90" -> "1:30", "60" -> "1min" (los presets de fábrica siguen en min/s redondos)
+function fmtPresetLabel(secs: number): string {
+  if (secs % 60 === 0) return `${secs / 60}min`
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`
 }
 
 function fromPrefill(pf: Prefill): ExState[] {
@@ -150,6 +162,11 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
       }),
     )
 
+  const changeUnit = (exerciseId: string, ei: number, unit: 'kg' | 'lb') => {
+    setExs((prev) => prev.map((e, idx) => (idx === ei ? { ...e, unit } : e)))
+    rpc.exercises[':id'].$patch({ param: { id: exerciseId }, json: { unit } }).catch((err) => console.error(err))
+  }
+
   async function finish() {
     setErr(null)
     setSaving(true)
@@ -163,7 +180,8 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
         notes: e.notes,
         sets: e.sets.map((s) => ({ reps: toNum(s.reps), weight: toNum(s.weight) })),
       }))
-      const res = await rpc.sessions.$post({ json: { dayId, entries } })
+      const durationSeconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000))
+      const res = await rpc.sessions.$post({ json: { dayId, entries, durationSeconds } })
       const body = (await res.json()) as
         | { success: true; data: FeedbackData }
         | { success: false; error: { message: string } }
@@ -200,7 +218,14 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
 
   return (
     <>
-      <TrainCockpit dayName={prefill.day.name} completed={completedCount} total={exs.length} startedAt={startedAt} dayId={dayId} />
+      <TrainCockpit
+        dayName={prefill.day.name}
+        completed={completedCount}
+        total={exs.length}
+        startedAt={startedAt}
+        dayId={dayId}
+        lastDurationSeconds={prefill.day.lastDurationSeconds}
+      />
       <main className="app-main" style={{ paddingTop: 8 }}>
         <div className="card" style={{ padding: '12px 14px' }}>
           <p className="hint" style={{ margin: 0 }}>
@@ -215,21 +240,48 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
             style={{ animationDelay: `${Math.min(ei, 8) * 40}ms` }}
             key={e.exerciseId}
           >
-            <button
-              type="button"
-              className="ex-train-head"
-              onClick={() => update(ei, { completed: !e.completed })}
-              aria-pressed={e.completed}
-            >
-              <span className={`checkbox ${e.completed ? 'checked' : ''}`} aria-hidden="true">
-                {e.completed && <i className="fa-solid fa-check"></i>}
-              </span>
-              <span className="ex-train-title">{e.name}</span>
-            </button>
+            <div className="ex-train-headrow">
+              <button
+                type="button"
+                className="ex-train-head"
+                onClick={() => update(ei, { completed: !e.completed })}
+                aria-pressed={e.completed}
+              >
+                <span className={`checkbox ${e.completed ? 'checked' : ''}`} aria-hidden="true">
+                  {e.completed && <i className="fa-solid fa-check"></i>}
+                </span>
+                <span className="ex-train-title">{e.name}</span>
+              </button>
+              <div className="unit-toggle" role="group" aria-label="Unidad de peso">
+                <button
+                  type="button"
+                  className={e.unit === 'kg' ? 'on' : ''}
+                  aria-pressed={e.unit === 'kg'}
+                  onClick={() => changeUnit(e.exerciseId, ei, 'kg')}
+                >
+                  kg
+                </button>
+                <button
+                  type="button"
+                  className={e.unit === 'lb' ? 'on' : ''}
+                  aria-pressed={e.unit === 'lb'}
+                  onClick={() => changeUnit(e.exerciseId, ei, 'lb')}
+                >
+                  lb
+                </button>
+              </div>
+            </div>
 
             {e.sets.map((s, si) => (
-              <div className="set-row" key={si}>
-                <span className="set-idx">S{si + 1}</span>
+              <div className="set-card" key={si}>
+                <div className="set-card-head">
+                  <span className="set-idx">Serie {si + 1}</span>
+                  {si > 0 && (
+                    <button className="icon-btn" onClick={() => removeSet(ei, si)} aria-label="quitar serie">
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  )}
+                </div>
                 <div className="set-field">
                   <span className="set-field-label">Repeticiones</span>
                   <div className="stepper">
@@ -285,13 +337,6 @@ export default function TrainingSession({ prefill, userPhone }: { prefill: Prefi
                     </button>
                   </div>
                 </div>
-                {si > 0 ? (
-                  <button className="icon-btn" onClick={() => removeSet(ei, si)} aria-label="quitar serie">
-                    <i className="fa-solid fa-xmark"></i>
-                  </button>
-                ) : (
-                  <span className="set-spacer"></span>
-                )}
               </div>
             ))}
 
@@ -344,12 +389,14 @@ function TrainCockpit({
   total,
   startedAt,
   dayId,
+  lastDurationSeconds,
 }: {
   dayName: string
   completed: number
   total: number
   startedAt: number
   dayId: string
+  lastDurationSeconds: number | null
 }) {
   // Se recalcula desde el timestamp de inicio: sobrevive recargas sin reiniciarse.
   const [seconds, setSeconds] = useState(() => Math.max(0, Math.floor((Date.now() - startedAt) / 1000)))
@@ -382,6 +429,7 @@ function TrainCockpit({
         <div className="clock" title="Tiempo de sesión">
           <span className="clock-time">{fmtClock(seconds)}</span>
           <span className="clock-label"><i className="fa-solid fa-stopwatch"></i> sesión</span>
+          {lastDurationSeconds != null && <span className="clock-prev">Antes: {fmtDuration(lastDurationSeconds)}</span>}
         </div>
       </div>
       <div className="train-progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
@@ -411,12 +459,37 @@ function beep() {
   } catch {}
 }
 
+type RestPreset = { secs: number; uses: number; custom: boolean }
+
+function loadRestPresets(): RestPreset[] {
+  const defaults = REST_PRESETS.map((secs) => ({ secs, uses: 0, custom: false }))
+  if (typeof window === 'undefined') return defaults
+  try {
+    const raw = localStorage.getItem(REST_PRESETS_KEY)
+    const arr = raw ? JSON.parse(raw) : null
+    if (!Array.isArray(arr)) return defaults
+    const saved: RestPreset[] = arr
+      .filter((p) => p && typeof p.secs === 'number')
+      .map((p) => ({ secs: p.secs, uses: typeof p.uses === 'number' ? p.uses : 0, custom: !!p.custom }))
+    // Los de fábrica siempre existen; se les pega el uso guardado si lo hay.
+    const merged = defaults.map((d) => saved.find((s) => s.secs === d.secs && !s.custom) ?? d)
+    const custom = saved.filter((s) => s.custom && !REST_PRESETS.includes(s.secs)).slice(0, REST_CUSTOM_MAX)
+    return [...merged, ...custom]
+  } catch {
+    return defaults
+  }
+}
+
 function RestTimer({ dayId }: { dayId: string }) {
   const [duration, setDuration] = useState(90)
   const [remaining, setRemaining] = useState(0)
   const [running, setRunning] = useState(false)
-  const [custom, setCustom] = useState('')
+  const [presets, setPresets] = useState<RestPreset[]>(loadRestPresets)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalMin, setModalMin] = useState(1)
+  const [modalSec, setModalSec] = useState(30)
   const endRef = useRef<number>(0)
+  const presetsRef = useRef<HTMLDivElement>(null)
 
   // Reanudar un descanso en curso tras recargar: el fin está guardado como
   // timestamp (ms), así el tiempo restante se recalcula al instante.
@@ -462,6 +535,22 @@ function RestTimer({ dayId }: { dayId: string }) {
       else localStorage.removeItem(restKey(dayId))
     } catch {}
   }
+  const persistPresets = (list: RestPreset[]) => {
+    try {
+      localStorage.setItem(REST_PRESETS_KEY, JSON.stringify(list))
+    } catch {}
+  }
+
+  // Cada uso suma un punto — el orden en pantalla (más usado primero, más a
+  // la izquierda) se deriva de esto al renderizar, no se guarda por separado.
+  const bumpUsage = (secs: number) =>
+    setPresets((prev) => {
+      if (!prev.some((p) => p.secs === secs)) return prev
+      const next = prev.map((p) => (p.secs === secs ? { ...p, uses: p.uses + 1 } : p))
+      persistPresets(next)
+      return next
+    })
+
   const start = (secs: number) => {
     setDuration(secs)
     setRemaining(secs)
@@ -469,6 +558,7 @@ function RestTimer({ dayId }: { dayId: string }) {
     endRef.current = endsAt
     persistEnd(endsAt)
     setRunning(true)
+    bumpUsage(secs)
   }
   const toggle = () => {
     if (running) {
@@ -484,36 +574,89 @@ function RestTimer({ dayId }: { dayId: string }) {
     persistEnd(null)
   }
 
+  // Un valor armado a mano (p. ej. 1:30) se vuelve botón para la próxima vez.
+  // Tope de REST_CUSTOM_MAX entre los custom: si ya está lleno, se cae el que
+  // menos se ha usado (empate entre varios con el mismo uso → al azar entre esos).
+  const addCustomPreset = (secs: number) => {
+    if (REST_PRESETS.includes(secs)) return
+    setPresets((prev) => {
+      if (prev.some((p) => p.secs === secs)) return prev
+      const custom = prev.filter((p) => p.custom)
+      let list = prev
+      if (custom.length >= REST_CUSTOM_MAX) {
+        const minUses = Math.min(...custom.map((p) => p.uses))
+        const leastUsed = custom.filter((p) => p.uses === minUses)
+        const toDrop = leastUsed[Math.floor(Math.random() * leastUsed.length)]
+        list = list.filter((p) => p.secs !== toDrop.secs)
+      }
+      const next = [...list, { secs, uses: 0, custom: true }]
+      persistPresets(next)
+      return next
+    })
+  }
+
+  const startCustom = () => {
+    const secs = modalMin * 60 + modalSec
+    if (secs <= 0) return
+    addCustomPreset(secs)
+    start(secs)
+    setModalOpen(false)
+  }
+
+  const clampMin = (n: number) => Math.max(0, Math.min(59, Math.round(n) || 0))
+  const clampSec = (n: number) => Math.max(0, Math.min(55, Math.round(n) || 0))
+
+  // Flechas para avanzar/retroceder un preset a la vez — más descubrible que
+  // depender de arrastrar (en PC no hay pista visual de que se puede deslizar).
+  const scrollByOne = (dir: 1 | -1) => {
+    const el = presetsRef.current
+    if (!el) return
+    const child = el.querySelector<HTMLElement>('.rest-preset')
+    const step = child ? child.offsetWidth + 6 : 80
+    el.scrollBy({ left: dir * step, behavior: 'smooth' })
+  }
+
+  // Más usado, más a la izquierda (más accesible sin tener que deslizar).
+  const sortedPresets = [...presets].sort((a, b) => b.uses - a.uses)
+
   return (
     <div className="rest-bar">
       <div className={`rest-time ${running ? 'running' : ''}`}>{fmtClock(remaining || duration)}</div>
-      <div className="rest-presets">
-        {REST_PRESETS.map((p) => (
-          <button key={p} className={`rest-preset ${duration === p ? 'on' : ''}`} onClick={() => start(p)}>
-            {p >= 60 ? `${p / 60}min` : `${p}s`}
-          </button>
-        ))}
-        <div className="rest-custom">
-          <input
-            type="number"
-            inputMode="numeric"
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && Number(custom) > 0) start(Number(custom))
-            }}
-            placeholder="seg"
-            aria-label="Descanso personalizado en segundos"
-          />
+      <div className="rest-presets-wrap">
+        <button
+          type="button"
+          className="rest-scroll-btn"
+          aria-label="Ver presets anteriores"
+          onClick={() => scrollByOne(-1)}
+        >
+          <i className="fa-solid fa-chevron-left"></i>
+        </button>
+        {/* El "+" vive al final del scroll (no fuera) para no robarle ancho
+            a la franja donde se desliza con el dedo. */}
+        <div className="rest-presets" ref={presetsRef}>
+          {sortedPresets.map((p) => (
+            <button key={p.secs} className={`rest-preset ${duration === p.secs ? 'on' : ''}`} onClick={() => start(p.secs)}>
+              {fmtPresetLabel(p.secs)}
+            </button>
+          ))}
           <button
             type="button"
-            className="icon-btn"
-            aria-label="Iniciar descanso personalizado"
-            onClick={() => Number(custom) > 0 && start(Number(custom))}
+            className="rest-preset rest-preset-add"
+            aria-label="Personalizar descanso"
+            title="Personalizar descanso"
+            onClick={() => setModalOpen(true)}
           >
-            <i className="fa-solid fa-arrow-right"></i>
+            <i className="fa-solid fa-plus"></i>
           </button>
         </div>
+        <button
+          type="button"
+          className="rest-scroll-btn"
+          aria-label="Ver más presets"
+          onClick={() => scrollByOne(1)}
+        >
+          <i className="fa-solid fa-chevron-right"></i>
+        </button>
       </div>
       <button className="rest-btn" onClick={toggle} aria-label={running ? 'Pausar descanso' : 'Iniciar descanso'} title="Iniciar/pausar descanso">
         <i className={`fa-solid ${running ? 'fa-pause' : 'fa-play'}`}></i>
@@ -521,6 +664,59 @@ function RestTimer({ dayId }: { dayId: string }) {
       <button className="rest-btn" onClick={reset} aria-label="Reiniciar descanso" title="Reiniciar" style={{ background: 'var(--surface3)', color: 'var(--text2)' }}>
         <i className="fa-solid fa-rotate-left"></i>
       </button>
+
+      {modalOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-head">
+                <span>Descanso personalizado</span>
+                <button type="button" className="icon-btn" aria-label="Cerrar" onClick={() => setModalOpen(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div className="row2">
+                <div className="set-field">
+                  <span className="set-field-label">Minutos</span>
+                  <div className="stepper">
+                    <button onClick={() => setModalMin((m) => clampMin(m - 1))} aria-label="menos minutos">−</button>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={modalMin}
+                      onChange={(e) => setModalMin(clampMin(Number(e.target.value)))}
+                    />
+                    <button onClick={() => setModalMin((m) => clampMin(m + 1))} aria-label="más minutos">+</button>
+                  </div>
+                </div>
+                <div className="set-field">
+                  <span className="set-field-label">Segundos</span>
+                  <div className="stepper">
+                    <button onClick={() => setModalSec((s) => clampSec(s - 5))} aria-label="menos segundos">−</button>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={modalSec}
+                      onChange={(e) => setModalSec(clampSec(Number(e.target.value)))}
+                    />
+                    <button onClick={() => setModalSec((s) => clampSec(s + 5))} aria-label="más segundos">+</button>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                style={{ marginTop: 12 }}
+                onClick={startCustom}
+                disabled={modalMin === 0 && modalSec === 0}
+              >
+                Iniciar descanso
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

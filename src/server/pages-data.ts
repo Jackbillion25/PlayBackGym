@@ -2,7 +2,7 @@
 // Las mutaciones van por la API Hono (RPC). Ownership: todo filtra por userId.
 import { and, eq, asc, desc, inArray } from 'drizzle-orm'
 import type { Db } from './db'
-import { routineDay, exercise, workoutSession, sessionEntry, sessionSet } from './db/schema'
+import { routineDay, exercise, exerciseSet, workoutSession, sessionEntry, sessionSet } from './db/schema'
 import { lastEntryFor } from './db/queries'
 
 export type PrefillExercise = {
@@ -27,6 +27,14 @@ export async function routineTree(db: Db, userId: string) {
     .from(exercise)
     .where(eq(exercise.userId, userId))
     .orderBy(asc(exercise.position), asc(exercise.createdAt))
+  const exIds = exercises.map((e) => e.id)
+  const sets = exIds.length
+    ? await db
+        .select()
+        .from(exerciseSet)
+        .where(inArray(exerciseSet.exerciseId, exIds))
+        .orderBy(asc(exerciseSet.setIndex))
+    : []
   return days.map((d) => ({
     id: d.id,
     name: d.name,
@@ -36,14 +44,14 @@ export async function routineTree(db: Db, userId: string) {
       .map((e) => ({
         id: e.id,
         name: e.name,
-        targetSets: e.targetSets,
-        targetReps: e.targetReps,
-        targetWeight: e.targetWeight,
         unit: e.unit,
         bench: e.bench,
         pulley: e.pulley,
         notes: e.notes,
         position: e.position,
+        sets: sets
+          .filter((s) => s.exerciseId === e.id)
+          .map((s) => ({ targetReps: s.targetReps, targetWeight: s.targetWeight })),
       })),
   }))
 }
@@ -64,6 +72,15 @@ export async function routineDayDetail(db: Db, userId: string, dayId: string) {
     .where(eq(exercise.dayId, dayId))
     .orderBy(asc(exercise.position), asc(exercise.createdAt))
 
+  const exIds = exercises.map((e) => e.id)
+  const sets = exIds.length
+    ? await db
+        .select()
+        .from(exerciseSet)
+        .where(inArray(exerciseSet.exerciseId, exIds))
+        .orderBy(asc(exerciseSet.setIndex))
+    : []
+
   return {
     id: dayRow[0].id,
     name: dayRow[0].name,
@@ -71,14 +88,14 @@ export async function routineDayDetail(db: Db, userId: string, dayId: string) {
     exercises: exercises.map((e) => ({
       id: e.id,
       name: e.name,
-      targetSets: e.targetSets,
-      targetReps: e.targetReps,
-      targetWeight: e.targetWeight,
       unit: e.unit,
       bench: e.bench,
       pulley: e.pulley,
       notes: e.notes,
       position: e.position,
+      sets: sets
+        .filter((s) => s.exerciseId === e.id)
+        .map((s) => ({ targetReps: s.targetReps, targetWeight: s.targetWeight })),
     })),
   }
 }
@@ -90,6 +107,16 @@ export async function prefillForDay(db: Db, userId: string, dayId: string) {
     .where(and(eq(routineDay.id, dayId), eq(routineDay.userId, userId)))
     .limit(1)
   if (!dayRow.length) return null
+
+  // Duración de la última vez que se entrenó este día — se muestra junto al
+  // cronómetro en vivo como referencia, sin ser intrusiva.
+  const lastSession = await db
+    .select({ durationSeconds: workoutSession.durationSeconds })
+    .from(workoutSession)
+    .where(and(eq(workoutSession.userId, userId), eq(workoutSession.dayId, dayId)))
+    .orderBy(desc(workoutSession.finishedAt))
+    .limit(1)
+  const lastDurationSeconds = lastSession[0]?.durationSeconds ?? null
 
   const exercises = await db
     .select()
@@ -104,8 +131,14 @@ export async function prefillForDay(db: Db, userId: string, dayId: string) {
     if (prev && prev.sets.length) {
       sets = prev.sets
     } else {
-      const n = Math.max(1, ex.targetSets ?? 1)
-      sets = Array.from({ length: n }, () => ({ reps: ex.targetReps, weight: ex.targetWeight }))
+      const targets = await db
+        .select({ targetReps: exerciseSet.targetReps, targetWeight: exerciseSet.targetWeight })
+        .from(exerciseSet)
+        .where(eq(exerciseSet.exerciseId, ex.id))
+        .orderBy(asc(exerciseSet.setIndex))
+      sets = targets.length
+        ? targets.map((t) => ({ reps: t.targetReps, weight: t.targetWeight }))
+        : [{ reps: null, weight: null }]
     }
     items.push({
       exerciseId: ex.id,
@@ -120,7 +153,7 @@ export async function prefillForDay(db: Db, userId: string, dayId: string) {
       sets,
     })
   }
-  return { day: { id: dayRow[0].id, name: dayRow[0].name }, exercises: items }
+  return { day: { id: dayRow[0].id, name: dayRow[0].name, lastDurationSeconds }, exercises: items }
 }
 
 export async function historyPage(db: Db, userId: string, limit = 30) {
@@ -145,6 +178,7 @@ export async function historyPage(db: Db, userId: string, limit = 30) {
       id: s.id,
       dayName: s.dayName,
       finishedAt: s.finishedAt.getTime(),
+      durationSeconds: s.durationSeconds,
       total: es.length,
       completedCount: es.filter((e) => e.completed).length,
     }
@@ -177,6 +211,7 @@ export async function sessionDetail(db: Db, userId: string, id: string) {
     id: sRow[0].id,
     dayName: sRow[0].dayName,
     finishedAt: sRow[0].finishedAt.getTime(),
+    durationSeconds: sRow[0].durationSeconds,
     entries: entries.map((e) => ({
       id: e.id,
       exerciseName: e.exerciseName,

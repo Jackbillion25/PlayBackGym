@@ -1,17 +1,16 @@
 import { useState } from 'react'
 import { rpc } from '../../lib/api-client'
 
+type ExerciseSetTarget = { targetReps: number | null; targetWeight: number | null }
 type Exercise = {
   id: string
   name: string
-  targetSets: number | null
-  targetReps: number | null
-  targetWeight: number | null
   unit: 'kg' | 'lb'
   bench: string | null
   pulley: string | null
   notes: string | null
   position: number
+  sets: ExerciseSetTarget[]
 }
 type Day = { id: string; name: string; position: number; exercises: Exercise[] }
 
@@ -24,23 +23,29 @@ async function ok<T>(p: Promise<{ json: () => Promise<unknown> }>): Promise<T> {
 
 const numOrNull = (v: string): number | null => (v.trim() === '' ? null : Number(v))
 
+const REPS_STEP = 1
+const WEIGHT_STEP_SMALL = 0.5
+const WEIGHT_STEP_BIG = 1
+
+type SetForm = { reps: string; weight: string }
 type FormValues = {
   name: string
-  sets: string
-  reps: string
-  weight: string
+  sets: SetForm[]
   unit: 'kg' | 'lb'
   bench: string
   pulley: string
   notes: string
 }
-const emptyForm: FormValues = { name: '', sets: '', reps: '', weight: '', unit: 'kg', bench: '', pulley: '', notes: '' }
+const emptyForm: FormValues = { name: '', sets: [{ reps: '', weight: '' }], unit: 'kg', bench: '', pulley: '', notes: '' }
 function fromExercise(ex: Exercise): FormValues {
   return {
     name: ex.name,
-    sets: ex.targetSets != null ? String(ex.targetSets) : '',
-    reps: ex.targetReps != null ? String(ex.targetReps) : '',
-    weight: ex.targetWeight != null ? String(ex.targetWeight) : '',
+    sets: ex.sets.length
+      ? ex.sets.map((s) => ({
+          reps: s.targetReps != null ? String(s.targetReps) : '',
+          weight: s.targetWeight != null ? String(s.targetWeight) : '',
+        }))
+      : [{ reps: '', weight: '' }],
     unit: ex.unit,
     bench: ex.bench ?? '',
     pulley: ex.pulley ?? '',
@@ -98,9 +103,7 @@ export default function RoutineDayEditor({ initialDay }: { initialDay: Day }) {
       if (!values.name.trim()) return
       const payload = {
         name: values.name.trim(),
-        targetSets: numOrNull(values.sets),
-        targetReps: numOrNull(values.reps),
-        targetWeight: numOrNull(values.weight),
+        sets: values.sets.map((s) => ({ targetReps: numOrNull(s.reps), targetWeight: numOrNull(s.weight) })),
         unit: values.unit,
         bench: values.bench.trim() || null,
         pulley: values.pulley.trim() || null,
@@ -203,10 +206,22 @@ export default function RoutineDayEditor({ initialDay }: { initialDay: Day }) {
   )
 }
 
+// Serie por serie con el mismo objetivo (el caso común) se resume compacto;
+// si varían, se listan una por una para no ocultar la diferencia.
+function setsSummary(sets: ExerciseSetTarget[], unit: 'kg' | 'lb'): string {
+  const n = sets.length
+  const first = sets[0]
+  const uniform = sets.every((s) => s.targetReps === first.targetReps && s.targetWeight === first.targetWeight)
+  if (uniform) {
+    if (first.targetReps == null && first.targetWeight == null) return `${n} serie${n === 1 ? '' : 's'}`
+    return `${n} serie${n === 1 ? '' : 's'} · ${first.targetReps ?? '—'} reps · ${first.targetWeight ?? '—'} ${unit}`
+  }
+  return `${sets.map((s) => `${s.targetReps ?? '—'}×${s.targetWeight ?? '—'}`).join(', ')} ${unit}`
+}
+
 function ExercisePreview({ ex }: { ex: Exercise }) {
   const meta: string[] = []
-  if (ex.targetSets || ex.targetReps || ex.targetWeight)
-    meta.push(`${ex.targetSets ?? '—'} series · ${ex.targetReps ?? '—'} reps · ${ex.targetWeight ?? '—'} ${ex.unit}`)
+  if (ex.sets.length) meta.push(setsSummary(ex.sets, ex.unit))
   if (ex.bench) meta.push(`Banco: ${ex.bench}`)
   if (ex.pulley) meta.push(`Polea: ${ex.pulley}`)
   return (
@@ -243,40 +258,104 @@ function ExerciseForm({
   const [v, setV] = useState<FormValues>(initial)
   const set = <K extends keyof FormValues>(key: K, val: FormValues[K]) => setV((prev) => ({ ...prev, [key]: val }))
 
+  const updateSet = (si: number, patch: Partial<SetForm>) =>
+    setV((prev) => ({ ...prev, sets: prev.sets.map((s, j) => (j === si ? { ...s, ...patch } : s)) }))
+
+  const step = (si: number, field: 'reps' | 'weight', delta: number) =>
+    setV((prev) => ({
+      ...prev,
+      sets: prev.sets.map((s, j) => {
+        if (j !== si) return s
+        const cur = Number(s[field]) || 0
+        let next = cur + delta
+        if (next < 0) next = 0
+        const val = Number.isInteger(next) ? String(next) : String(Math.round(next * 10) / 10)
+        return { ...s, [field]: val }
+      }),
+    }))
+
+  const addSet = () =>
+    setV((prev) => {
+      const last = prev.sets[prev.sets.length - 1] ?? { reps: '', weight: '' }
+      return { ...prev, sets: [...prev.sets, { ...last }] }
+    })
+
+  const removeSet = (si: number) =>
+    setV((prev) => {
+      const sets = prev.sets.filter((_, j) => j !== si)
+      return { ...prev, sets: sets.length ? sets : [{ reps: '', weight: '' }] }
+    })
+
   return (
     <div className="card anim-expand" style={{ marginTop: 10, marginBottom: 10, background: 'var(--surface2)' }}>
       <div className="field">
         <label>Ejercicio</label>
         <input value={v.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej. Press banca inclinado" autoFocus />
       </div>
-      <div className="row3">
-        <div className="field">
-          <label>Series</label>
-          <input type="number" min="1" value={v.sets} onChange={(e) => set('sets', e.target.value)} placeholder="4" />
-        </div>
-        <div className="field">
-          <label>Reps</label>
-          <input type="number" min="1" value={v.reps} onChange={(e) => set('reps', e.target.value)} placeholder="10" />
-        </div>
-        <div className="field">
-          <label>Peso</label>
-          <input type="number" step="0.5" value={v.weight} onChange={(e) => set('weight', e.target.value)} placeholder="40" />
-        </div>
+      <div className="field">
+        <label>Unidad</label>
+        <select value={v.unit} onChange={(e) => set('unit', e.target.value as 'kg' | 'lb')}>
+          <option value="kg">kg</option>
+          <option value="lb">lb</option>
+        </select>
       </div>
-      <div className="row2">
-        <div className="field">
-          <label>Unidad</label>
-          <select value={v.unit} onChange={(e) => set('unit', e.target.value as 'kg' | 'lb')}>
-            <option value="kg">kg</option>
-            <option value="lb">lb</option>
-          </select>
+
+      {v.sets.map((s, si) => (
+        <div className="set-card" key={si}>
+          <div className="set-card-head">
+            <span className="set-idx">Serie {si + 1}</span>
+            {v.sets.length > 1 && (
+              <button className="icon-btn" onClick={() => removeSet(si)} aria-label="quitar serie">
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+          </div>
+          <div className="set-field">
+            <span className="set-field-label">
+              Repeticiones <span className="opcional">(opcional)</span>
+            </span>
+            <div className="stepper">
+              <button onClick={() => step(si, 'reps', -REPS_STEP)} aria-label="menos reps">−</button>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={s.reps}
+                onChange={(e) => updateSet(si, { reps: e.target.value })}
+                placeholder="reps"
+              />
+              <button onClick={() => step(si, 'reps', REPS_STEP)} aria-label="más reps">+</button>
+            </div>
+          </div>
+          <div className="set-field">
+            <span className="set-field-label">
+              Peso ({v.unit}) <span className="opcional">(opcional)</span>
+            </span>
+            <div className="stepper stepper-weight">
+              <button className="step-lg" onClick={() => step(si, 'weight', -WEIGHT_STEP_BIG)} aria-label="menos 1">−</button>
+              <button className="step-sm" onClick={() => step(si, 'weight', -WEIGHT_STEP_SMALL)} aria-label="menos 0.5">−</button>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                value={s.weight}
+                onChange={(e) => updateSet(si, { weight: e.target.value })}
+                placeholder="peso"
+              />
+              <button className="step-sm" onClick={() => step(si, 'weight', WEIGHT_STEP_SMALL)} aria-label="más 0.5">+</button>
+              <button className="step-lg" onClick={() => step(si, 'weight', WEIGHT_STEP_BIG)} aria-label="más 1">+</button>
+            </div>
+          </div>
         </div>
-        <div className="field">
-          <label>
-            Banco <span className="opcional">(opcional)</span>
-          </label>
-          <input value={v.bench} onChange={(e) => set('bench', e.target.value)} placeholder="Ej. nivel 3" />
-        </div>
+      ))}
+      <button className="btn btn-ghost btn-sm" onClick={addSet} style={{ margin: '6px 0 12px' }}>
+        <i className="fa-solid fa-plus"></i> Agregar serie
+      </button>
+
+      <div className="field">
+        <label>
+          Banco <span className="opcional">(opcional)</span>
+        </label>
+        <input value={v.bench} onChange={(e) => set('bench', e.target.value)} placeholder="Ej. nivel 3" />
       </div>
       <div className="field">
         <label>

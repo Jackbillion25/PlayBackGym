@@ -1,11 +1,12 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, desc, lt, inArray, asc } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import type { ApiEnv } from '../types'
 import { routineDay, exercise, workoutSession, sessionEntry, sessionSet } from '../../db/schema'
 import { lastEntryFor } from '../../db/queries'
+import { historyPage, sessionDetail } from '../../pages-data'
 import { compareEntry, type CompareRow } from '../logic/compare'
 import { buildWhatsAppText } from '../logic/whatsapp'
 
@@ -25,6 +26,8 @@ const entrySchema = z.object({
 const sessionSchema = z.object({
   dayId: z.string().min(1),
   entries: z.array(entrySchema).min(1).max(50),
+  // Tiempo transcurrido en el reloj de la sesión (cronómetro cliente).
+  durationSeconds: z.number().int().min(0).max(24 * 3600),
 })
 
 export const sessionsRoutes = new Hono<ApiEnv>()
@@ -113,6 +116,7 @@ export const sessionsRoutes = new Hono<ApiEnv>()
         dayId: day.id,
         dayName: day.name,
         finishedAt,
+        durationSeconds: body.durationSeconds,
       }),
     ]
     for (const er of entryRecords) {
@@ -163,93 +167,23 @@ export const sessionsRoutes = new Hono<ApiEnv>()
     )
   })
 
-  // Historial paginado (cursor = finishedAt epoch del último item)
-  .get('/sessions', zValidator('query', z.object({ cursor: z.coerce.number().optional(), limit: z.coerce.number().int().min(1).max(50).default(20) })), async (c) => {
+  // Historial — RPC (usado por la futura app móvil; la web usa historyPage
+  // directo en SSR). Misma lógica que esa función.
+  .get('/sessions', zValidator('query', z.object({ limit: z.coerce.number().int().min(1).max(50).default(30) })), async (c) => {
     const db = c.var.db
     const userId = c.var.user.id
-    const { cursor, limit } = c.req.valid('query')
-
-    const where = cursor
-      ? and(eq(workoutSession.userId, userId), lt(workoutSession.finishedAt, new Date(cursor)))
-      : eq(workoutSession.userId, userId)
-
-    const sessions = await db
-      .select()
-      .from(workoutSession)
-      .where(where)
-      .orderBy(desc(workoutSession.finishedAt))
-      .limit(limit + 1)
-
-    const page = sessions.slice(0, limit)
-    const nextCursor = sessions.length > limit ? page[page.length - 1].finishedAt.getTime() : null
-
-    const ids = page.map((s) => s.id)
-    const entries = ids.length
-      ? await db
-          .select({ sessionId: sessionEntry.sessionId, completed: sessionEntry.completed })
-          .from(sessionEntry)
-          .where(inArray(sessionEntry.sessionId, ids))
-      : []
-
-    const items = page.map((s) => {
-      const es = entries.filter((e) => e.sessionId === s.id)
-      return {
-        id: s.id,
-        dayName: s.dayName,
-        finishedAt: s.finishedAt.getTime(),
-        total: es.length,
-        completedCount: es.filter((e) => e.completed).length,
-      }
-    })
-
-    return c.json({ success: true, data: { items, nextCursor } } as const)
+    const { limit } = c.req.valid('query')
+    const items = await historyPage(db, userId, limit)
+    return c.json({ success: true, data: items } as const)
   })
 
-  // Detalle de una sesión: entries + sets
+  // Detalle de una sesión — RPC (idem, mismo motivo que arriba).
   .get('/sessions/:id', async (c) => {
     const db = c.var.db
     const userId = c.var.user.id
     const id = c.req.param('id')
 
-    const sRow = await db
-      .select()
-      .from(workoutSession)
-      .where(and(eq(workoutSession.id, id), eq(workoutSession.userId, userId)))
-      .limit(1)
-    if (!sRow.length) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Sesión no encontrada' } } as const, 404)
-
-    const entries = await db
-      .select()
-      .from(sessionEntry)
-      .where(eq(sessionEntry.sessionId, id))
-      .orderBy(asc(sessionEntry.position))
-
-    const entryIds = entries.map((e) => e.id)
-    const sets = entryIds.length
-      ? await db
-          .select()
-          .from(sessionSet)
-          .where(inArray(sessionSet.entryId, entryIds))
-          .orderBy(asc(sessionSet.setIndex))
-      : []
-
-    const data = {
-      id: sRow[0].id,
-      dayName: sRow[0].dayName,
-      finishedAt: sRow[0].finishedAt.getTime(),
-      entries: entries.map((e) => ({
-        id: e.id,
-        exerciseId: e.exerciseId,
-        exerciseName: e.exerciseName,
-        completed: e.completed,
-        bench: e.bench,
-        pulley: e.pulley,
-        extraWeight: e.extraWeight,
-        notes: e.notes,
-        sets: sets
-          .filter((s) => s.entryId === e.id)
-          .map((s) => ({ setIndex: s.setIndex, reps: s.reps, weight: s.weight })),
-      })),
-    }
-    return c.json({ success: true, data } as const)
+    const detail = await sessionDetail(db, userId, id)
+    if (!detail) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Sesión no encontrada' } } as const, 404)
+    return c.json({ success: true, data: detail } as const)
   })

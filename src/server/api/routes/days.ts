@@ -4,19 +4,21 @@ import { z } from 'zod'
 import { and, eq, asc, max } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import type { ApiEnv } from '../types'
-import { routineDay, exercise } from '../../db/schema'
-import { lastEntryFor } from '../../db/queries'
+import { routineDay, exercise, exerciseSet } from '../../db/schema'
+import { prefillForDay } from '../../pages-data'
 
 const daySchema = z.object({ name: z.string().trim().min(1).max(60) })
 const dayPatchSchema = z.object({
   name: z.string().trim().min(1).max(60).optional(),
   position: z.number().int().min(0).optional(),
 })
+const exerciseSetSchema = z.object({
+  targetReps: z.number().int().min(1).max(100).nullable(),
+  targetWeight: z.number().min(0).max(1000).nullable(),
+})
 const exerciseSchema = z.object({
   name: z.string().trim().min(1).max(80),
-  targetSets: z.number().int().min(1).max(20).nullable().optional(),
-  targetReps: z.number().int().min(1).max(100).nullable().optional(),
-  targetWeight: z.number().min(0).max(1000).nullable().optional(),
+  sets: z.array(exerciseSetSchema).min(1).max(20).optional(),
   unit: z.enum(['kg', 'lb']).optional(),
   bench: z.string().trim().max(60).nullable().optional(),
   pulley: z.string().trim().max(60).nullable().optional(),
@@ -116,9 +118,6 @@ export const daysRoutes = new Hono<ApiEnv>()
       dayId,
       userId,
       name: body.name,
-      targetSets: body.targetSets ?? null,
-      targetReps: body.targetReps ?? null,
-      targetWeight: body.targetWeight ?? null,
       unit: body.unit ?? ('kg' as const),
       bench: body.bench ?? null,
       pulley: body.pulley ?? null,
@@ -126,52 +125,30 @@ export const daysRoutes = new Hono<ApiEnv>()
       position: (maxPos ?? -1) + 1,
       createdAt: new Date(),
     }
-    await db.insert(exercise).values(ex)
-    return c.json({ success: true, data: ex } as const, 201)
+    const setsInput = body.sets && body.sets.length ? body.sets : [{ targetReps: null, targetWeight: null }]
+    const setRows = setsInput.map((s, i) => ({
+      id: nanoid(),
+      exerciseId: ex.id,
+      setIndex: i,
+      targetReps: s.targetReps,
+      targetWeight: s.targetWeight,
+    }))
+    await db.batch([
+      db.insert(exercise).values(ex),
+      ...setRows.map((sr) => db.insert(exerciseSet).values(sr)),
+    ] as [any, ...any[]])
+    return c.json({ success: true, data: { ...ex, sets: setRows } } as const, 201)
   })
 
-  // ★ Draft inicial de entrenamiento (replica buildTrainingDraft del prototipo)
+  // ★ Draft inicial de entrenamiento — RPC (usado por la futura app móvil; la
+  // web usa prefillForDay directo en SSR). Misma lógica que esa función.
   .get('/days/:dayId/prefill', async (c) => {
     const db = c.var.db
     const userId = c.var.user.id
     const dayId = c.req.param('dayId')
 
-    const dayRow = await db
-      .select()
-      .from(routineDay)
-      .where(and(eq(routineDay.id, dayId), eq(routineDay.userId, userId)))
-      .limit(1)
-    if (!dayRow.length) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Día no encontrado' } } as const, 404)
+    const prefill = await prefillForDay(db, userId, dayId)
+    if (!prefill) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Día no encontrado' } } as const, 404)
 
-    const exercises = await db
-      .select()
-      .from(exercise)
-      .where(eq(exercise.dayId, dayId))
-      .orderBy(asc(exercise.position), asc(exercise.createdAt))
-
-    const items = []
-    for (const ex of exercises) {
-      const prev = await lastEntryFor(db, userId, ex.id)
-      let sets: { reps: number | null; weight: number | null }[]
-      if (prev && prev.sets.length) {
-        sets = prev.sets
-      } else {
-        const n = Math.max(1, ex.targetSets ?? 1)
-        sets = Array.from({ length: n }, () => ({ reps: ex.targetReps, weight: ex.targetWeight }))
-      }
-      items.push({
-        exerciseId: ex.id,
-        name: ex.name,
-        unit: ex.unit,
-        bench: prev?.bench ?? ex.bench ?? '',
-        pulley: prev?.pulley ?? ex.pulley ?? '',
-        notes: '',
-        sets,
-      })
-    }
-
-    return c.json({
-      success: true,
-      data: { day: { id: dayRow[0].id, name: dayRow[0].name }, exercises: items },
-    } as const)
+    return c.json({ success: true, data: prefill } as const)
   })

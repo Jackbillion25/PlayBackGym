@@ -3,7 +3,7 @@ import AppLayout from '../../../layouts/AppLayout.astro'
 import { createDb } from '../../../server/db'
 import { cfEnv } from '../../../server/runtime'
 import { sessionDetail } from '../../../server/pages-data'
-import { fmtDate, fmtWeight } from '../../../lib/format'
+import { fmtDate, fmtDuration, fmtWeight } from '../../../lib/format'
 
 const { id } = Astro.params
 const user = Astro.locals.user!
@@ -16,7 +16,9 @@ if (!detail) return Astro.redirect('/app/historial')
 <AppLayout brand="Sesión" subtitle={detail.dayName} back="/app/historial" title={`${detail.dayName} — Sesión`}>
   <div class="card" style="padding:12px 14px;">
     <div class="eyebrow">{detail.dayName}</div>
-    <div class="hint" style="margin:0;">{fmtDate(detail.finishedAt)}</div>
+    <div class="hint" style="margin:0;">
+      {fmtDate(detail.finishedAt)}{detail.durationSeconds != null && <> · {fmtDuration(detail.durationSeconds)}</>}
+    </div>
   </div>
 
   {

@@ -2,15 +2,18 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, eq, asc } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 import type { ApiEnv } from '../types'
-import { exercise, sessionEntry, sessionSet, workoutSession } from '../../db/schema'
+import { exercise, exerciseSet, sessionEntry, sessionSet, workoutSession } from '../../db/schema'
 import { setStats } from '../logic/compare'
 
+const exerciseSetSchema = z.object({
+  targetReps: z.number().int().min(1).max(100).nullable(),
+  targetWeight: z.number().min(0).max(1000).nullable(),
+})
 const exercisePatchSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
-  targetSets: z.number().int().min(1).max(20).nullable().optional(),
-  targetReps: z.number().int().min(1).max(100).nullable().optional(),
-  targetWeight: z.number().min(0).max(1000).nullable().optional(),
+  sets: z.array(exerciseSetSchema).min(1).max(20).optional(),
   unit: z.enum(['kg', 'lb']).optional(),
   bench: z.string().trim().max(60).nullable().optional(),
   pulley: z.string().trim().max(60).nullable().optional(),
@@ -23,14 +26,42 @@ export const exercisesRoutes = new Hono<ApiEnv>()
     const db = c.var.db
     const userId = c.var.user.id
     const id = c.req.param('id')
-    const patch = c.req.valid('json')
-    const res = await db
-      .update(exercise)
-      .set(patch)
+    const { sets, ...patch } = c.req.valid('json')
+
+    const owner = await db
+      .select({ id: exercise.id })
+      .from(exercise)
       .where(and(eq(exercise.id, id), eq(exercise.userId, userId)))
-      .returning()
-    if (!res.length) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Ejercicio no encontrado' } } as const, 404)
-    return c.json({ success: true, data: res[0] } as const)
+      .limit(1)
+    if (!owner.length) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Ejercicio no encontrado' } } as const, 404)
+
+    const statements: any[] = []
+    if (Object.keys(patch).length) {
+      statements.push(db.update(exercise).set(patch).where(eq(exercise.id, id)))
+    }
+    if (sets) {
+      statements.push(db.delete(exerciseSet).where(eq(exerciseSet.exerciseId, id)))
+      sets.forEach((s, i) => {
+        statements.push(
+          db.insert(exerciseSet).values({
+            id: nanoid(),
+            exerciseId: id,
+            setIndex: i,
+            targetReps: s.targetReps,
+            targetWeight: s.targetWeight,
+          }),
+        )
+      })
+    }
+    if (statements.length) await db.batch(statements as [any, ...any[]])
+
+    const [updated] = await db.select().from(exercise).where(eq(exercise.id, id)).limit(1)
+    const setRows = await db
+      .select()
+      .from(exerciseSet)
+      .where(eq(exerciseSet.exerciseId, id))
+      .orderBy(asc(exerciseSet.setIndex))
+    return c.json({ success: true, data: { ...updated, sets: setRows } } as const)
   })
 
   .delete('/exercises/:id', async (c) => {

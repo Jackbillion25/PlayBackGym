@@ -89,9 +89,6 @@ export const exercise = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    targetSets: integer('target_sets'),
-    targetReps: integer('target_reps'),
-    targetWeight: real('target_weight'),
     unit: text('unit', { enum: ['kg', 'lb'] })
       .notNull()
       .default('kg'),
@@ -106,6 +103,24 @@ export const exercise = sqliteTable(
   (t) => [index('exercise_day_idx').on(t.dayId)],
 )
 
+// Objetivo por serie (no todas las series de un ejercicio arrancan con las
+// mismas reps/peso). Reemplaza el viejo trío targetSets/targetReps/targetWeight
+// en `exercise`: una fila por serie planeada, igual que `sessionSet` guarda una
+// fila por serie realmente hecha.
+export const exerciseSet = sqliteTable(
+  'exercise_set',
+  {
+    id: text('id').primaryKey(),
+    exerciseId: text('exercise_id')
+      .notNull()
+      .references(() => exercise.id, { onDelete: 'cascade' }),
+    setIndex: integer('set_index').notNull(),
+    targetReps: integer('target_reps'),
+    targetWeight: real('target_weight'),
+  },
+  (t) => [index('exercise_set_exercise_idx').on(t.exerciseId)],
+)
+
 export const workoutSession = sqliteTable(
   'workout_session',
   {
@@ -116,6 +131,9 @@ export const workoutSession = sqliteTable(
     dayId: text('day_id').references(() => routineDay.id, { onDelete: 'set null' }),
     dayName: text('day_name').notNull(),
     finishedAt: integer('finished_at', { mode: 'timestamp' }).notNull(),
+    // Cuánto duró la sesión (desde que se abrió hasta "Finalizar"). Nula en
+    // sesiones guardadas antes de que existiera este campo.
+    durationSeconds: integer('duration_seconds'),
   },
   (t) => [index('ws_user_idx').on(t.userId, t.finishedAt)],
 )
@@ -189,6 +207,7 @@ export const stripeWebhookEvent = sqliteTable('stripe_webhook_event', {
 export type User = typeof user.$inferSelect
 export type RoutineDay = typeof routineDay.$inferSelect
 export type Exercise = typeof exercise.$inferSelect
+export type ExerciseSet = typeof exerciseSet.$inferSelect
 export type WorkoutSession = typeof workoutSession.$inferSelect
 export type SessionEntry = typeof sessionEntry.$inferSelect
 export type SessionSet = typeof sessionSet.$inferSelect

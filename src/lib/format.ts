@@ -31,3 +31,12 @@ export function fmtClock(totalSeconds: number): string {
   const sec = s % 60
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
+
+// Duración legible ("42 min", "1h 12min") — para historial y "la última vez".
+export function fmtDuration(totalSeconds: number): string {
+  const m = Math.max(0, Math.round(totalSeconds / 60))
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  const rem = m % 60
+  return rem ? `${h}h ${rem}min` : `${h}h`
+}

@@ -3,7 +3,7 @@ import AppLayout from '../../../layouts/AppLayout.astro'
 import { createDb } from '../../../server/db'
 import { cfEnv } from '../../../server/runtime'
 import { historyPage } from '../../../server/pages-data'
-import { fmtDate } from '../../../lib/format'
+import { fmtDate, fmtDuration } from '../../../lib/format'
 
 const user = Astro.locals.user!
 const db = createDb(cfEnv.DB)
@@ -18,7 +18,9 @@ const items = await historyPage(db, user.id, 50)
           <a class="history-item anim-in" style={`animation-delay:${Math.min(i, 10) * 25}ms`} href={`/app/historial/${h.id}`}>
             <div>
               <div class="h-day">{h.dayName}</div>
-              <div class="h-stat">{h.completedCount}/{h.total} completados</div>
+              <div class="h-stat">
+                {h.completedCount}/{h.total} completados{h.durationSeconds != null && <> · {fmtDuration(h.durationSeconds)}</>}
+              </div>
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <span class="h-date">{fmtDate(h.finishedAt)}</span>
